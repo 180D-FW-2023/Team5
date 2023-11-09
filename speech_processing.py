@@ -51,7 +51,9 @@ def gather_speech_data():
             print("ERROR: {}".format(guess["error"]))
             break
     
-        print("You said: {}".format(guess["transcription"]))
+        #print("You said: {}".format(guess["transcription"]))
+        
+        return guess["transcription"]
 
 
 if __name__ == "__main__":
