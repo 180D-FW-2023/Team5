@@ -59,6 +59,6 @@ def convert_text_to_bear_audio(input_text):
 
 if __name__ == '__main__':
 
-    input_text = "Hi there! What's your name? My name is foo foo the bear. Would you like to play a choose your own adventure game?"
+    input_text = "I eat pizza all the time do you"
 
     convert_text_to_bear_audio(input_text)
