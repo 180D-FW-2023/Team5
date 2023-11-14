@@ -16,7 +16,24 @@ import numpy as np
 from numpy.random import uniform
 import wave
 import os
+import pygame
+import time
 
+# Use pygame to play a wav file using default speaker
+def play_wav(wav_path):
+    pygame.init()
+    pygame.mixer.init()
+
+    try:
+        sound = pygame.mixer.Sound(wav_path)
+        sound.play()
+        time.sleep(sound.get_length())  # Wait for the sound to finish playing
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        pygame.quit()
+
+# Creates a bear voice wav file and plays it
 def convert_text_to_bear_audio(input_text):
     int_dir = "./intermediate_files"
     out_dir = "./output"
@@ -50,7 +67,9 @@ def convert_text_to_bear_audio(input_text):
     hipitch_sound = hipitch_sound.set_frame_rate(44100)
 
     # Export pitch-changed sound
-    hipitch_sound.export(out_dir + "/bear_voice.wav", format="wav")
+    pitch_change_path = out_dir + "/bear_voice.wav"
+    hipitch_sound.export(pitch_change_path, format="wav")
+    play_wav(pitch_change_path)
 
     # Remove the intermediate directory
     os.remove(audio_mp3_path)
