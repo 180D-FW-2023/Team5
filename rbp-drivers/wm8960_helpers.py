@@ -45,22 +45,22 @@ def get_saved_audio_file(output_file_path):
     print(f'Input Device: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
     return f
 
-def record_audio_by_time(output_file_path, device="default", record_time=10000):
-    # rough time in ms
+def record_audio_by_time(output_file_path, device="default", record_time=10):
+    # rough time in s
 
     inp = get_input_device(device)
     f = get_saved_audio_file(output_file_path)
 
     saved_time = 0
+    start_time = time.time()
     while True:
         l, data = inp.read()
         if l:
             f.writeframes(data)
             time.sleep(.001)
             # saves exactly time ms
-            saved_time += 1
-            if saved_time >= record_time:
-                break
+        if time.time - start_time > record_time:
+            break
     f.close()
 
     return output_file_path
