@@ -1,10 +1,10 @@
 from __future__ import print_function
 
 import sys
+import time
 import wave
 import getopt
 import alsaaudio
-
 
 
 CHANNELS = 2
@@ -45,7 +45,7 @@ def get_saved_audio_file(output_file_path):
     print(f'Input Device: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
     return f
 
-def record_audio_by_time(output_file_path, device="default", time=10000):
+def record_audio_by_time(output_file_path, device="default", record_time=10000):
     # rough time in ms
 
     inp = get_input_device(device)
@@ -59,7 +59,7 @@ def record_audio_by_time(output_file_path, device="default", time=10000):
             time.sleep(.001)
             # saves exactly time ms
             saved_time += 1
-            if saved_time >= time:
+            if saved_time >= record_time:
                 break
     f.close()
 
