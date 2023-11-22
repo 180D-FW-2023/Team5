@@ -102,3 +102,7 @@ def play_audio(path, device="default"):
         data = f.readframes(periodsize)
 
     f.close()
+
+if __name__ == "__main__":
+    record_audio_by_time("out.wav")
+    play_audio("out.wav")
