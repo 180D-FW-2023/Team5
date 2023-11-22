@@ -59,7 +59,7 @@ def record_audio_by_time(output_file_path, device="default", record_time=10):
             f.writeframes(data)
             time.sleep(.001)
             # saves exactly time ms
-        if time.time - start_time > record_time:
+        if time.time() - start_time > record_time:
             break
     f.close()
 
