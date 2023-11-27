@@ -37,9 +37,19 @@ def play_wav(wav_path):
         except Exception as e:
             print(f"Error: {e}")
 
+# Split a long string with no punctuation into two pieces based on 
+# words that sound natural with a pause before them
+def split_into_two_pieces(input_string):
+    conjunctions = [' or ', ' and ', ' but ']
+    for conjunction in conjunctions:
+        if conjunction in input_string:
+            pieces = input_string.split(conjunction, 1)
+            return pieces[0].strip(), conjunction + pieces[1]
+    return None
 
 # Creates a bear voice wav file and plays it
 def convert_text_to_bear_audio(input_text, output_path_num):
+    
     int_dir = "./intermediate_files"
     out_dir = "./output"
 
@@ -54,13 +64,28 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     audio_mp3_path = int_dir + "/raw_audio_ " + str(output_path_num) + ".mp3"
     audio_wav_path = int_dir + "/raw_audio_" + str(output_path_num) + ".wav"
 
-    # Text-to-speech and save as WAV
-    tts = gTTS(input_text)
-    tts.save(audio_mp3_path)
+    # Create an empty audio segment to store the audio content
+    final_audio = AudioSegment.silent(duration=0)
 
-    # Convert MP3 to WAV using PyDub
-    audio = AudioSegment.from_mp3(audio_mp3_path)
-    audio.export(audio_wav_path, format="wav")
+    text_pieces = [input_text]
+
+    # If number of chars is over 100, we have to split the text to create a more natural pause
+    #print("INPUT TEXT NUM CHARS: ", len(input_text))
+    if len(input_text) > 100:
+        res = split_into_two_pieces(input_text)
+        if res != None:
+            text_pieces = res
+
+    for text_piece in text_pieces:
+        # Text-to-speech and save as WAV
+        tts = gTTS(text_piece)
+        tts.save(audio_mp3_path)
+
+        # Convert MP3 to WAV using PyDub
+        audio = AudioSegment.from_mp3(audio_mp3_path)
+        final_audio += audio
+    
+    final_audio.export(audio_wav_path, format="wav")
 
     # Read in raw wave file
     sound = AudioSegment.from_file(audio_wav_path, format=audio_wav_path[-3:])

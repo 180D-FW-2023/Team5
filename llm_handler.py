@@ -51,6 +51,7 @@ def has_punctuation(input_string):
 
 def has_ending_punctuation(input_string):
     return (',' in input_string) or ('.' in input_string) or ('?' in input_string) or ('!' in input_string)
+
  
 def translate_and_get_duration(trans_block, output_path_num):
     """
@@ -68,7 +69,7 @@ def translate_and_get_duration(trans_block, output_path_num):
     duration, final_path = tba.convert_text_to_bear_audio(trans_block, output_path_num)
     return duration, final_path
 
-def send_openai_api_request(game_state, P=20, TTS_time=2):
+def send_openai_api_request(game_state, P=20, min_pieces=8, TTS_time=2):
     """
     Send a new message to GPT 3.5 Turbo LLM including the context of the game so far. Also,
     upon receiving a response in stream mode, convert the text to bear audio and play it
@@ -136,13 +137,14 @@ def send_openai_api_request(game_state, P=20, TTS_time=2):
                 #   we convert the next in-progress chunk. Note two things: "too close" to the previous audio clip finishing is based on the
                 #   TTS_time paramter, which is an estimate of how long the conversion process will take AND we will only convert the current
                 #   chunk if the last chunk IS NOT IMMEDIATELY FOLLOWED BY PUNCTUATION. This minimizes the number of awkward audio pauses.
-                if ((first and len(pieces) >= P + 1) or (len(pieces) > 6 and has_ending_punctuation(pieces[-2]))):
+                if (((first and len(pieces) >= P + 1) or (len(pieces) > min_pieces and has_ending_punctuation(pieces[-2]))) 
+                    and not has_punctuation(curr_piece)):
                 #if ((first and len(pieces) >= P + 1) or (time.time() - last_start_time > required_time - TTS_time)) and not has_punctuation(curr_piece):
                     
                     first = False
+                    trans_block = ''.join(pieces[:-1])
                     # Create current translation block using all but the last of the pieces to ensure that the final piece we translate is not
                     #  immediately followed by punctuation
-                    trans_block = ''.join(pieces[:-1])
                     print(trans_block)
                     full += trans_block
                     required_time, final_path = translate_and_get_duration(trans_block, audio_count)
