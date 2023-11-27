@@ -26,7 +26,6 @@ pygame.init()
 pygame.mixer.init()
 
 # Use pygame to play a wav file using default speaker
-# Use pygame to play a wav file using default speaker
 def play_wav(wav_path):
     with audio_lock:
 
@@ -40,7 +39,7 @@ def play_wav(wav_path):
 
 
 # Creates a bear voice wav file and plays it
-def convert_text_to_bear_audio(input_text, output_path):
+def convert_text_to_bear_audio(input_text, output_path_num):
     int_dir = "./intermediate_files"
     out_dir = "./output"
 
@@ -52,8 +51,8 @@ def convert_text_to_bear_audio(input_text, output_path):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-    audio_mp3_path = int_dir + "/raw_audio_ " + str(output_path) + ".mp3"
-    audio_wav_path = int_dir + "/raw_audio_" + str(output_path) + ".wav"
+    audio_mp3_path = int_dir + "/raw_audio_ " + str(output_path_num) + ".mp3"
+    audio_wav_path = int_dir + "/raw_audio_" + str(output_path_num) + ".wav"
 
     # Text-to-speech and save as WAV
     tts = gTTS(input_text)
@@ -73,7 +72,7 @@ def convert_text_to_bear_audio(input_text, output_path):
     hipitch_sound = hipitch_sound.set_frame_rate(44100)
 
     # Export pitch-changed sound
-    pitch_change_path = out_dir + "/bear_voice_" + str(output_path) + ".wav"
+    pitch_change_path = out_dir + "/bear_voice_" + str(output_path_num) + ".wav"
     hipitch_sound.export(pitch_change_path, format="wav")
 
     # Remove the intermediate directory

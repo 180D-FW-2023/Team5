@@ -49,19 +49,23 @@ def has_punctuation(input_string):
     """
     return any(char in string.punctuation for char in input_string)
 
-def translate_and_get_duration(trans_block, output_path):
+def has_ending_punctuation(input_string):
+    return (',' in input_string) or ('.' in input_string) or ('?' in input_string) or ('!' in input_string)
+ 
+def translate_and_get_duration(trans_block, output_path_num):
     """
     Convert the given text string to an audio file in the bear's voice by calling a helper function
     and return the length of the created audio file and path of the created audio file
 
     Parameters:
     - trans_block (str): The string to be converted to bear-like audio.
+    - output_path_num (int): The number to be used in the wav and mp3 audio file names.
 
     Returns:
     - duration (int): Time in seconds of the created audio file.
     - final_path (str): Output path of the created audio file
     """
-    duration, final_path = tba.convert_text_to_bear_audio(trans_block, output_path)
+    duration, final_path = tba.convert_text_to_bear_audio(trans_block, output_path_num)
     return duration, final_path
 
 def send_openai_api_request(game_state, P=20, TTS_time=2):
@@ -115,6 +119,7 @@ def send_openai_api_request(game_state, P=20, TTS_time=2):
                 # Only worry about converting the last in-progress chunk if it is nonempty
                 if len(pieces) > 0:
                     trans_block = ''.join(pieces)
+                    print(trans_block)
                     full += trans_block
                     required_time, final_path = translate_and_get_duration(trans_block, audio_count)
                     executor.submit(tba.play_wav, final_path)
@@ -131,7 +136,9 @@ def send_openai_api_request(game_state, P=20, TTS_time=2):
                 #   we convert the next in-progress chunk. Note two things: "too close" to the previous audio clip finishing is based on the
                 #   TTS_time paramter, which is an estimate of how long the conversion process will take AND we will only convert the current
                 #   chunk if the last chunk IS NOT IMMEDIATELY FOLLOWED BY PUNCTUATION. This minimizes the number of awkward audio pauses.
-                if ((first and len(pieces) >= P + 1) or (time.time() - last_start_time > required_time - TTS_time)) and not has_punctuation(curr_piece):
+                if ((first and len(pieces) >= P + 1) or (len(pieces) > 6 and has_ending_punctuation(pieces[-2]))):
+                #if ((first and len(pieces) >= P + 1) or (time.time() - last_start_time > required_time - TTS_time)) and not has_punctuation(curr_piece):
+                    
                     first = False
                     # Create current translation block using all but the last of the pieces to ensure that the final piece we translate is not
                     #  immediately followed by punctuation
