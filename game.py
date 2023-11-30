@@ -6,6 +6,9 @@ import llm_handler as llm_h
 
 
 def main():
+    # #Test call to speech recognition program
+    # sp.recognize_wav("test/test_capstone.wav")
+    # return
     """
     Runs the choose your own adventure game.
     """

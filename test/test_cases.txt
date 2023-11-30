@@ -1,0 +1,8 @@
+--------------------------------------------------------------------------------------------------------------------------------------------------
+text_to_bear_audio.py
+
+convert_text_to_bear_audio()
+* tba.convert_text_to_bear_audio("In general, natural pauses in speech often occur at punctuation marks or when there's a need to emphasize a 
+    point", 1)
+* tba.convert_text_to_bear_audio("Would you like to explore the deep sea with friendly mermaids or go on a thrilling safari with a bunch of big 
+    friendly animals or explore deep space as an adventurous astronaut?", 2)
