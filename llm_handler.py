@@ -50,26 +50,43 @@ def has_punctuation(input_string):
     return any(char in string.punctuation for char in input_string)
 
 def has_ending_punctuation(input_string):
+    """
+    Check if the given input string contains any punctuation characters like a comma,
+    period, question mark, or exclamation point for which a pause would sound natural
+    after.s
+
+    Parameters:
+    - input_string (str): The string to be checked for punctuation.
+
+    Returns:
+    - bool: True if the input string contains at least one of the punctuation 
+            characters, False otherwise.
+
+    Examples:
+    >>> has_punctuation("Hello, world!")
+    True
+
+    >>> has_punctuation("There's no ending punctuation here")
+    False
+    """
     return (',' in input_string) or ('.' in input_string) or ('?' in input_string) or ('!' in input_string)
 
- 
-def translate_and_get_duration(trans_block, output_path_num):
+def translate(trans_block, output_path_num):
     """
     Convert the given text string to an audio file in the bear's voice by calling a helper function
-    and return the length of the created audio file and path of the created audio file
+    and return the path of the created audio file
 
     Parameters:
     - trans_block (str): The string to be converted to bear-like audio.
     - output_path_num (int): The number to be used in the wav and mp3 audio file names.
 
     Returns:
-    - duration (int): Time in seconds of the created audio file.
     - final_path (str): Output path of the created audio file
     """
-    duration, final_path = tba.convert_text_to_bear_audio(trans_block, output_path_num)
-    return duration, final_path
+    final_path = tba.convert_text_to_bear_audio(trans_block, output_path_num)
+    return final_path
 
-def send_openai_api_request(game_state, P=20, min_pieces=8, TTS_time=2):
+def send_openai_api_request(game_state, P=20, min_pieces=8):
     """
     Send a new message to GPT 3.5 Turbo LLM including the context of the game so far. Also,
     upon receiving a response in stream mode, convert the text to bear audio and play it
@@ -79,14 +96,13 @@ def send_openai_api_request(game_state, P=20, min_pieces=8, TTS_time=2):
     - game_state (list): The list of dictionaries which contains all the context of the current game.
     - P (int): The number of pieces of response required to collect before converting the first part of the response
                 to playable audio.
-    - TTS_time (int): An empirically selected time in seconds required to (roughly) convert a given text string to speech audio.
+    - min_pieces (int): The minimum number of pieces of response required for to collect before converting to playable audio.
 
     Returns:
     - full (str): The response from GPT 3.5 Turbo.
     """
 
     # Create an OpenAI API request for GPT 3.5 Turbo
-    begin_time = time.time()
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         stream=True,
@@ -97,9 +113,7 @@ def send_openai_api_request(game_state, P=20, min_pieces=8, TTS_time=2):
     pieces = []
     full = ''
     audio_count = 0
-    required_time = 1e10
     first = True
-    last_start_time = 0
     
     # We take a multithreaded approach to handle reponses
     # The idea is to constantly have one thread reading in new reponse pieces while
@@ -122,7 +136,7 @@ def send_openai_api_request(game_state, P=20, min_pieces=8, TTS_time=2):
                     trans_block = ''.join(pieces)
                     print(trans_block)
                     full += trans_block
-                    required_time, final_path = translate_and_get_duration(trans_block, audio_count)
+                    final_path = translate(trans_block, audio_count)
                     executor.submit(tba.play_wav, final_path)
             else:
                 if curr_piece == '':
@@ -131,15 +145,13 @@ def send_openai_api_request(game_state, P=20, min_pieces=8, TTS_time=2):
                 # Maintain a list of the pieces that make up the in-progress translation chunk
                 pieces.append(curr_piece)
                 
-                # Once we have obtained a certain number of pieces or run out of time to collect pieces, begin the conversion process
+                # Once we have obtained a certain number of pieces, begin the conversion process
                 # Current implementation: if this is the first translation block, convert and play it as soon as we have a given number of pieces (P)
-                #   Then, continue collecting new pieces until we get close to the time that the current audio clip will be ending, at which point
-                #   we convert the next in-progress chunk. Note two things: "too close" to the previous audio clip finishing is based on the
-                #   TTS_time paramter, which is an estimate of how long the conversion process will take AND we will only convert the current
-                #   chunk if the last chunk IS NOT IMMEDIATELY FOLLOWED BY PUNCTUATION. This minimizes the number of awkward audio pauses.
+                #   Then, continue collecting new pieces until we get min_pieces pieces and the previous piece has ending punctuation (,.?!). 
+                #   Regardless of if it's the first piece or not the current piece can't contain any punctuation; this minimizes the number of 
+                #   awkward audio pauses.
                 if (((first and len(pieces) >= P + 1) or (len(pieces) > min_pieces and has_ending_punctuation(pieces[-2]))) 
                     and not has_punctuation(curr_piece)):
-                #if ((first and len(pieces) >= P + 1) or (time.time() - last_start_time > required_time - TTS_time)) and not has_punctuation(curr_piece):
                     
                     first = False
                     trans_block = ''.join(pieces[:-1])
@@ -147,10 +159,9 @@ def send_openai_api_request(game_state, P=20, min_pieces=8, TTS_time=2):
                     #  immediately followed by punctuation
                     print(trans_block)
                     full += trans_block
-                    required_time, final_path = translate_and_get_duration(trans_block, audio_count)
+                    final_path = translate(trans_block, audio_count)
 
                     # Reset the last start time to be the time that we last started converting and playing the most recent audio segment
-                    last_start_time = time.time()
                     executor.submit(tba.play_wav, final_path)
                     audio_count += 1
                     pieces = [pieces[-1]]

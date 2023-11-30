@@ -1,7 +1,7 @@
 ##################################################################################################################
 #
 #           Text string to teddy bear voice converter
-#           Written by Spencer Stice
+#           Written by Spencer Stice and Nick Brandis
 #           Sources: https://batulaiko.medium.com/how-to-pitch-shift-in-python-c59b53a84b6d
 #           Requirements: gtts, pydub, numpy, wave, os
 #           Note: if trouble with pydub occurs, install ffmpeg and add:
@@ -105,8 +105,7 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     os.remove(audio_wav_path)
     os.rmdir(int_dir)
 
-    sound = pygame.mixer.Sound(pitch_change_path)
-    return sound.get_length(), pitch_change_path
+    return pitch_change_path
 
 if __name__ == '__main__':
 
