@@ -103,7 +103,22 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     # Remove the intermediate directory
     os.remove(audio_mp3_path)
     os.remove(audio_wav_path)
-    os.rmdir(int_dir)
+
+    file_list = os.listdir(int_dir)
+
+    # Check if the directory is empty
+    if not file_list:
+        # Directory is empty, remove it
+        os.rmdir(int_dir)
+    else:
+        # Directory is not empty, remove all files
+        for file_name in file_list:
+            file_path = os.path.join(int_dir, file_name)
+            os.remove(file_path)
+
+        # Now that all files are removed, remove the directory
+        os.rmdir(int_dir)
+
 
     return pitch_change_path
 

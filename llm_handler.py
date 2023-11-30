@@ -133,11 +133,12 @@ def send_openai_api_request(game_state, P=20, min_pieces=8):
 
                 # Only worry about converting the last in-progress chunk if it is nonempty
                 if len(pieces) > 0:
-                    trans_block = ''.join(pieces)
-                    print(trans_block)
-                    full += trans_block
-                    final_path = translate(trans_block, audio_count)
-                    executor.submit(tba.play_wav, final_path)
+                    if pieces[0] != '':
+                        trans_block = ''.join(pieces)
+                        print(trans_block)
+                        full += trans_block
+                        final_path = translate(trans_block, audio_count)
+                        executor.submit(tba.play_wav, final_path)
             else:
                 if curr_piece == '':
                     continue
