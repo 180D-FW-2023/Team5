@@ -40,11 +40,18 @@ def play_wav(wav_path):
 # Split a long string with no punctuation into two pieces based on 
 # words that sound natural with a pause before them
 def split_into_two_pieces(input_string):
+    # First look for conjunctions
     conjunctions = [' or ', ' and ', ' but ']
     for conjunction in conjunctions:
         if conjunction in input_string:
             pieces = input_string.split(conjunction, 1)
             return pieces[0].strip(), conjunction + pieces[1]
+    # If none found, look for other words
+    second_options = ['that', 'with', 'then']
+    for word in second_options:
+        if word in input_string:
+            pieces = input_string.split(word, 1)
+            return pieces[0].strip(), word + pieces[1]
     return None
 
 # Creates a bear voice wav file and plays it
