@@ -6,7 +6,7 @@ import alsaaudio
 
 
 CHANNELS = 2
-RATE = 16000
+RATE = 44100
 FORMAT = alsaaudio.PCM_FORMAT_S16_LE
 PERIOD_SIZE = 160
 
