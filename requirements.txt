@@ -1,0 +1,6 @@
+gTTS
+SpeechRecognition
+numpy
+pygame
+pydub
+pyalsaaudio
