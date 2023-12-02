@@ -21,7 +21,7 @@ def recognize_speech_from_mic(recognizer, microphone):
             "transcription": None
         }
 
-        try: 
+        try:
             response["transcription"] = recognizer.recognize_google(audio)
         except sr.RequestError:
             response["success"] = False
@@ -52,9 +52,9 @@ def gather_speech_data():
         if guess["error"]:
             print("ERROR: {}".format(guess["error"]))
             break
-    
+
         #print("You said: {}".format(guess["transcription"]))
-        
+
         return guess["transcription"]
 
 # Function for speech recognition from a WAV file
@@ -70,10 +70,9 @@ def recognize_wav(file_path):
         # Using Google Web Speech API
         text = recognizer.recognize_google(audio_data)
         print("Text from WAV file:", text)
+       
+        return text
     except sr.UnknownValueError:
         print("Could not understand audio.")
     except sr.RequestError as e:
         print(f"Error with the request to Google Speech Recognition service; {e}")
-
-
-    
