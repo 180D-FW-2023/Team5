@@ -37,7 +37,7 @@ def play_wav(wav_path):
         except Exception as e:
             print(f"Error: {e}")
 
-# Split a long string with no punctuation into two pieces based on 
+# Split a long string with no punctuation into two pieces based on
 # words that sound natural with a pause before them
 def split_into_two_pieces(input_string):
     # First look for conjunctions
@@ -56,7 +56,7 @@ def split_into_two_pieces(input_string):
 
 # Creates a bear voice wav file and plays it
 def convert_text_to_bear_audio(input_text, output_path_num):
-    
+
     int_dir = "./intermediate_files"
     out_dir = "./output"
 
@@ -91,7 +91,7 @@ def convert_text_to_bear_audio(input_text, output_path_num):
         # Convert MP3 to WAV using PyDub
         audio = AudioSegment.from_mp3(audio_mp3_path)
         final_audio += audio
-    
+
     final_audio.export(audio_wav_path, format="wav")
 
     # Read in raw wave file
@@ -101,7 +101,7 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     octaves = 0.4
     new_sample_rate = int(sound.frame_rate * (2.0 ** octaves))
     hipitch_sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate})
-    hipitch_sound = hipitch_sound.set_frame_rate(44100)
+    hipitch_sound = hipitch_sound.set_frame_rate(16000)
 
     # Export pitch-changed sound
     pitch_change_path = out_dir + "/bear_voice_" + str(output_path_num) + ".wav"

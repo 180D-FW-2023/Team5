@@ -6,7 +6,7 @@ import alsaaudio
 
 
 CHANNELS = 2
-RATE = 44100
+RATE = 16000
 FORMAT = alsaaudio.PCM_FORMAT_S16_LE
 PERIOD_SIZE = 160
 
@@ -38,7 +38,7 @@ def get_saved_audio_file(output_file_path):
     f = wave.open(output_file_path, "wb")
     f.setnchannels(CHANNELS)
     f.setsampwidth(FORMAT_DICT[FORMAT])
-    f.setframerate(44100)
+    f.setframerate(RATE)
 
     print(f'Input Device: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
     return f
