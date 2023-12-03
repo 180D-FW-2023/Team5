@@ -1,6 +1,7 @@
 import random
 import time
 import speech_recognition as sr
+import concurrent.futures
 
 # Converts the recorded audio to text
 def recognize_speech_from_mic(recognizer, microphone):
@@ -76,3 +77,6 @@ def recognize_wav(file_path):
         print("Could not understand audio.")
     except sr.RequestError as e:
         print(f"Error with the request to Google Speech Recognition service; {e}")
+
+
+    
