@@ -10,15 +10,16 @@
 #
 ###################################################################################################################
 
-from gtts import gTTS
-from pydub import AudioSegment
-import numpy as np
-from numpy.random import uniform
-import wave
 import os
 import time
 import threading
 import shutil
+
+import ffmpeg
+from gtts import gTTS
+from pydub import AudioSegment
+import numpy as np
+from numpy.random import uniform
 
 from helper import timeit
 
@@ -136,7 +137,10 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     return pitch_change_path
 
 # Creates a bear voice wav file and plays it
-def convert_text_to_bear_audio_opt(input_text, output_path_num):
+def convert_text_to_bear_audio_opt(input_text,
+                                   output_path_num,
+                                   n_semitones=4,
+                                   tempo_multiplier=1.3):
 
     int_dir = "./intermediate_files"
     out_dir = "./output"
@@ -164,32 +168,35 @@ def convert_text_to_bear_audio_opt(input_text, output_path_num):
         if res != None:
             text_pieces = res
 
-    for text_piece in text_pieces:
-        # Text-to-speech and save as WAV
-        tts = timeit(gTTS)(text_piece)
-        timeit(tts.save)(audio_mp3_path)
+    with open(audio_mp3_path, "wb") as f:
+        for text_piece in text_pieces:
+            # Text-to-speech and save as WAV
+            tts = timeit(gTTS)(text_piece)
+            timeit(tts.write_to_fp)(f)
 
-        # Convert MP3 to WAV using PyDub
-        audio = timeit(AudioSegment.from_mp3)(audio_mp3_path)
-        final_audio += audio
-    timeit(final_audio.export)(audio_wav_path, format="wav")
-
-    # Read in raw wave file
-    sound = timeit(AudioSegment.from_file)(audio_wav_path, format=audio_wav_path[-3:])
-
-    # Shift the audio up
-    octaves = 0.4
-    new_sample_rate = int(sound.frame_rate * (2.0 ** octaves))
-    hipitch_sound = timeit(sound._spawn)(sound.raw_data, overrides={'frame_rate': new_sample_rate})
-    hipitch_sound = timeit(hipitch_sound.set_frame_rate)(16000)
-
-    # Export pitch-changed sound
+    # ffmpeg run
     pitch_change_path = out_dir + "/bear_voice_" + str(output_path_num) + ".wav"
-    timeit(hipitch_sound.export)(pitch_change_path, format="wav")
+
+    pitch = (2**n_semitones)/12 # frequency ratio of a semitone
+
+    stream = ffmpeg.input(audio_mp3_path,
+                          y=None,
+                          hide_banner=None,
+                          loglevel="error"
+                          ) # =None is an empty ffmpeg flag
+    stream = stream.filter("rubberband",
+                           pitch=pitch,
+                           tempo=tempo_multiplier
+                           )
+    stream = stream.output(pitch_change_path,
+                           acodec="pcm_s16le",
+                           ar=16000
+                           )
+    ffmpeg.run(stream)
 
     # Remove the intermediate directory
-    os.remove(audio_mp3_path)
-    os.remove(audio_wav_path)
+    # os.remove(audio_mp3_path)
+    # os.remove(audio_wav_path)
 
     shutil.rmtree(int_dir)
 
