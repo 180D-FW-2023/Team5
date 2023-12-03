@@ -118,21 +118,7 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     os.remove(audio_mp3_path)
     os.remove(audio_wav_path)
 
-    file_list = os.listdir(int_dir)
-
-    # Check if the directory is empty
-    if not file_list:
-        # Directory is empty, remove it
-        os.rmdir(int_dir)
-    else:
-        # Directory is not empty, remove all files
-        for file_name in file_list:
-            file_path = os.path.join(int_dir, file_name)
-            os.remove(file_path)
-
-        # Now that all files are removed, remove the directory
-        os.rmdir(int_dir)
-
+    shutil.rmtree(int_dir)
 
     return pitch_change_path
 
@@ -166,7 +152,7 @@ def convert_text_to_bear_audio_opt(input_text,
                           y=None,
                           hide_banner=None,
                           loglevel="error"
-                          ) # =None is an empty ffmpeg flag
+                          ) # =None is an ffmpeg flag with no input kw
     stream = stream.filter("rubberband",
                            pitch=pitch,
                            tempo=tempo_multiplier
@@ -182,7 +168,7 @@ def convert_text_to_bear_audio_opt(input_text,
     # os.remove(audio_mp3_path)
     # os.remove(audio_wav_path)
 
-    # os.remove(temp_mp3_path)
+    os.remove(temp_mp3_path)
 
     return output_path
 
