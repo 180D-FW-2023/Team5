@@ -13,7 +13,7 @@ from helper import timeit
 def local_testing():
     temp_wav_file = "../test_data/test_capstone.wav"
     text = timeit(sp.recognize_wav)(temp_wav_file)
-    out_audio_path = timeit(tba.convert_text_to_bear_audio_opt)(text, 1)
+    out_audio_path = timeit(tba.convert_text_to_bear_audio_opt)(text, "out.wav")
     print(out_audio_path)
 
 

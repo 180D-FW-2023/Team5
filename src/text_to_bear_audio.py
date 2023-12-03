@@ -138,26 +138,11 @@ def convert_text_to_bear_audio(input_text, output_path_num):
 
 # Creates a bear voice wav file and plays it
 def convert_text_to_bear_audio_opt(input_text,
-                                   output_path_num,
+                                   output_path,
                                    n_semitones=4,
                                    tempo_multiplier=1.3):
 
-    int_dir = "./intermediate_files"
-    out_dir = "./output"
-
-    # Create the intermediate directory if it doesn't already exist
-    if not os.path.exists(int_dir):
-        os.makedirs(int_dir)
-
-    # Create the output directory if it doesn't already exist
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-
-    audio_mp3_path = int_dir + "/raw_audio_ " + str(output_path_num) + ".mp3"
-    audio_wav_path = int_dir + "/raw_audio_" + str(output_path_num) + ".wav"
-
-    # Create an empty audio segment to store the audio content
-    final_audio = AudioSegment.silent(duration=0)
+    temp_mp3_path = "temp.mp3"
 
     text_pieces = [input_text]
 
@@ -168,18 +153,16 @@ def convert_text_to_bear_audio_opt(input_text,
         if res != None:
             text_pieces = res
 
-    with open(audio_mp3_path, "wb") as f:
+    with open(temp_mp3_path, "wb") as f:
         for text_piece in text_pieces:
             # Text-to-speech and save as WAV
             tts = timeit(gTTS)(text_piece)
             timeit(tts.write_to_fp)(f)
 
     # ffmpeg run
-    pitch_change_path = out_dir + "/bear_voice_" + str(output_path_num) + ".wav"
-
     pitch = (2**n_semitones)/12 # frequency ratio of a semitone
 
-    stream = ffmpeg.input(audio_mp3_path,
+    stream = ffmpeg.input(temp_mp3_path,
                           y=None,
                           hide_banner=None,
                           loglevel="error"
@@ -188,9 +171,10 @@ def convert_text_to_bear_audio_opt(input_text,
                            pitch=pitch,
                            tempo=tempo_multiplier
                            )
-    stream = stream.output(pitch_change_path,
+    stream = stream.output(output_path,
+                           preset="ultrafast",
                            acodec="pcm_s16le",
-                           ar=16000
+                           ar=16000,
                            )
     ffmpeg.run(stream)
 
@@ -198,9 +182,9 @@ def convert_text_to_bear_audio_opt(input_text,
     # os.remove(audio_mp3_path)
     # os.remove(audio_wav_path)
 
-    shutil.rmtree(int_dir)
+    # os.remove(temp_mp3_path)
 
-    return pitch_change_path
+    return output_path
 
 if __name__ == '__main__':
 
