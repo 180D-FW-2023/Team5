@@ -123,6 +123,7 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     return pitch_change_path
 
 # Creates a bear voice wav file and plays it
+# requires ffmpeg
 def convert_text_to_bear_audio_opt(input_text,
                                    output_path,
                                    n_semitones=4,
