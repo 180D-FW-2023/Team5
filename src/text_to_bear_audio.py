@@ -20,13 +20,14 @@ import pygame
 import time
 import threading
 
-# Create a lock to synchronize access to the audio playback
-audio_lock = threading.Lock()
-pygame.init()
-pygame.mixer.init()
 
 # Use pygame to play a wav file using default speaker
 def play_wav(wav_path):
+# Create a lock to synchronize access to the audio playback
+    audio_lock = threading.Lock()
+    pygame.init()
+    pygame.mixer.init()
+
     with audio_lock:
 
         try:
@@ -85,7 +86,10 @@ def convert_text_to_bear_audio(input_text, output_path_num):
 
     for text_piece in text_pieces:
         # Text-to-speech and save as WAV
+        start = time.time()
         tts = gTTS(text_piece)
+        end = time.time()
+        print(f"TTS: {end-start}")
         tts.save(audio_mp3_path)
 
         # Convert MP3 to WAV using PyDub
