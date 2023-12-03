@@ -4,3 +4,4 @@ numpy
 pygame
 pydub
 pyalsaaudio
+ffmpeg-python

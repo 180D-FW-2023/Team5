@@ -10,23 +10,27 @@
 #
 ###################################################################################################################
 
+import os
+import time
+import threading
+import shutil
+
+import ffmpeg
 from gtts import gTTS
 from pydub import AudioSegment
 import numpy as np
 from numpy.random import uniform
-import wave
-import os
-import pygame
-import time
-import threading
 
-# Create a lock to synchronize access to the audio playback
-audio_lock = threading.Lock()
-pygame.init()
-pygame.mixer.init()
+from helper import timeit
 
 # Use pygame to play a wav file using default speaker
 def play_wav(wav_path):
+# Create a lock to synchronize access to the audio playback
+    import pygame
+    audio_lock = threading.Lock()
+    pygame.init()
+    pygame.mixer.init()
+
     with audio_lock:
 
         try:
@@ -85,7 +89,10 @@ def convert_text_to_bear_audio(input_text, output_path_num):
 
     for text_piece in text_pieces:
         # Text-to-speech and save as WAV
+        start = time.time()
         tts = gTTS(text_piece)
+        end = time.time()
+        print(f"TTS: {end-start}")
         tts.save(audio_mp3_path)
 
         # Convert MP3 to WAV using PyDub
@@ -111,23 +118,60 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     os.remove(audio_mp3_path)
     os.remove(audio_wav_path)
 
-    file_list = os.listdir(int_dir)
-
-    # Check if the directory is empty
-    if not file_list:
-        # Directory is empty, remove it
-        os.rmdir(int_dir)
-    else:
-        # Directory is not empty, remove all files
-        for file_name in file_list:
-            file_path = os.path.join(int_dir, file_name)
-            os.remove(file_path)
-
-        # Now that all files are removed, remove the directory
-        os.rmdir(int_dir)
-
+    shutil.rmtree(int_dir)
 
     return pitch_change_path
+
+# Creates a bear voice wav file and plays it
+# requires ffmpeg
+def convert_text_to_bear_audio_opt(input_text,
+                                   output_path,
+                                   n_semitones=4,
+                                   tempo_multiplier=1.3):
+
+    temp_mp3_path = "temp.mp3"
+
+    text_pieces = [input_text]
+
+    # If number of chars is over 100, we have to split the text to create a more natural pause
+    #print("INPUT TEXT NUM CHARS: ", len(input_text))
+    if len(input_text) > 100:
+        res = split_into_two_pieces(input_text)
+        if res != None:
+            text_pieces = res
+
+    with open(temp_mp3_path, "wb") as f:
+        for text_piece in text_pieces:
+            # Text-to-speech and save as WAV
+            tts = timeit(gTTS)(text_piece)
+            timeit(tts.write_to_fp)(f)
+
+    # ffmpeg run
+    pitch = (2**n_semitones)/12 # frequency ratio of a semitone
+
+    stream = ffmpeg.input(temp_mp3_path,
+                          y=None,
+                          hide_banner=None,
+                          loglevel="error"
+                          ) # =None is an ffmpeg flag with no input kw
+    stream = stream.filter("rubberband",
+                           pitch=pitch,
+                           tempo=tempo_multiplier
+                           )
+    stream = stream.output(output_path,
+                           preset="ultrafast",
+                           acodec="pcm_s16le",
+                           ar=16000,
+                           )
+    ffmpeg.run(stream)
+
+    # Remove the intermediate directory
+    # os.remove(audio_mp3_path)
+    # os.remove(audio_wav_path)
+
+    os.remove(temp_mp3_path)
+
+    return output_path
 
 if __name__ == '__main__':
 
