@@ -8,11 +8,10 @@ import tcp_file_transfer as tcp
 
 from helper import timeit
 
-ftc = tcp.FileTransferClient("192.168.99.31", 12345)
-ftc.connect_to_server()
-
 wav_file = "../test_data/test_capstone.wav"
 
+ftc = tcp.FileTransferClient("192.168.99.31", 12345)
+ftc.connect_to_server()
 ftc.send_file(wav_file)
 ftc.receive_file("out.wav")
 print("received")

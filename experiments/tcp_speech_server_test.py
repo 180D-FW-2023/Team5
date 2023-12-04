@@ -16,6 +16,7 @@ fts.receive_file(receive_file_path)
 
 text = timeit(sp.recognize_wav)(receive_file_path)
 out_audio_path = timeit(tba.convert_text_to_bear_audio_opt)(text, "out.wav")
+os.remove(receive_file_path)
 print(out_audio_path)
 
 fts.send_file(out_audio_path)
