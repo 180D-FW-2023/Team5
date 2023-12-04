@@ -10,7 +10,7 @@ from helper import timeit
 
 RECEIVED_FILE_PATH = "temp.wav"
 
-SERVER_IP = "192.168.1.89"
+SERVER_IP = "127.0.0.1"
 
 FIRST = True
 
@@ -21,12 +21,10 @@ def init_server():
 
 def send_bear_audio_and_receive_raw_audio(bear_audio_path, fts, end=False):
 
-    if FIRST:
-        FIRST = False
-        input = input("Is the client (RPI) running? ")
     fts.send_file(bear_audio_path)
     os.remove(bear_audio_path)
 
     if end:
         fts.send_file("./termination.txt")
         fts.receive_file(RECEIVED_FILE_PATH)
+        print("received file-----------------------")

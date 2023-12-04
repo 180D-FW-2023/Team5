@@ -12,7 +12,7 @@ import wave
 RECORD_TIME = 10
 
 #IP Address of the TCP server for handling most computation tasks
-SERVER_IP = "192.168.1.89"
+SERVER_IP = "127.0.0.1"
 
 def main():
 
@@ -21,7 +21,7 @@ def main():
 
     while True:
 
-        received_file="/mnt/c/UCLA/Senior/Capstone/Final_Project/experiments/experimental_src/received_path.wav"
+        received_file="./received_path.wav"
         ftc.receive_file(received_file)
 
         try:
@@ -34,7 +34,7 @@ def main():
         except wave.Error:
             # An error occurred, so it's not a valid WAV file
             os.remove(received_file)
-
+            print("sending file")
             ftc.send_file("./test_capstone.wav")
 
 
