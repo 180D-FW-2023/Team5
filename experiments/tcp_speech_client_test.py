@@ -1,17 +1,23 @@
 import sys
-import os
 sys.path.append(r"../src")
+import os
+import time
 
-import speech_processing as sp
-import text_to_bear_audio as tba
 import tcp_file_transfer as tcp
-
+import rbp_drivers.wm8960_helpers as rbp
 from helper import timeit
 
-wav_file = "../test_data/test_capstone.wav"
+INPUT_FILE_PATH = "../test_data/test_capstone.wav"
+RECEIVED_PATH = "out.wav"
 
+start = time.time()
 ftc = tcp.FileTransferClient("192.168.99.31", 12345)
 ftc.connect_to_server()
-ftc.send_file(wav_file)
-ftc.receive_file("out.wav")
-print("received")
+ftc.send_file(INPUT_FILE_PATH)
+ftc.receive_file(RECEIVED_PATH)
+end = time.time()
+
+rbp.play_audio(RECEIVED_PATH)
+os.remove(RECEIVED_PATH)
+
+print(f"TOTAL PROCESSING TIME FOR FILE: {end-start}")
