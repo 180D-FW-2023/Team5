@@ -1,9 +1,13 @@
 import socket
+import os
+import struct
+import time
 
 END_SIGNAL = b"FileTransferComplete"
+# TODO: ADD TIMEOUTS
 
 class FileTransferClient:
-    def __init__(self, server_ip, server_port):
+    def __init__(self, server_ip, server_port, timeout=None):
         self.server_ip = server_ip
         self.server_port = server_port
         self.tcp_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -19,8 +23,13 @@ class FileTransferClient:
             print(f"Error connecting to server: {e}")
             raise
 
-    def send_file(self, file_path):
+    def send_file(self, file_path, timeout=20):
         try:
+            # Send the file size
+            file_size = os.path.getsize(file_path)
+            size_data = struct.pack("!I", file_size)
+            self.tcp_client_socket.sendall(size_data)
+
             with open(file_path, 'rb') as file:
                 file_data = file.read()
                 self.tcp_client_socket.sendall(file_data)
@@ -32,12 +41,20 @@ class FileTransferClient:
 
     def receive_file(self, save_path):
         try:
-            with open(save_path, 'wb') as file:
-                data = self.tcp_client_socket.recv(1024)
-                while data:
+            # Receive the file size
+            size_data = self.tcp_client_socket.recv(4)
+            file_size = struct.unpack("!I", size_data)[0]
 
-                    file.write(data)
+            received_size = 0
+            with open(save_path, 'wb') as file:
+                while received_size < file_size:
                     data = self.tcp_client_socket.recv(1024)
+                    if not data:
+                        break
+                    file.write(data)
+                    received_size += len(data)
+
+            print(f"File received and saved at {save_path}")
         except Exception as e:
             print(f"Error receiving file: {e}")
 
@@ -69,21 +86,36 @@ class FileTransferServer:
 
     def receive_file(self, save_path):
         try:
+            # Receive the file size
+            size_data = self.tcp_client_socket.recv(4)
+            file_size = struct.unpack("!I", size_data)[0]
+
+            received_size = 0
             with open(save_path, 'wb') as file:
-                data = self.tcp_client_socket.recv(1024)
-                while data:
-                    file.write(data)
+                while received_size < file_size:
                     data = self.tcp_client_socket.recv(1024)
+                    if not data:
+                        break
+                    file.write(data)
+                    received_size += len(data)
+
             print(f"File received and saved at {save_path}")
         except Exception as e:
             print(f"Error receiving file: {e}")
 
     def send_file(self, file_path):
         try:
+
+            # Send the file size
+            file_size = os.path.getsize(file_path)
+            size_data = struct.pack("!I", file_size)
+            self.tcp_client_socket.sendall(size_data)
+
             with open(file_path, 'rb') as file:
                 file_data = file.read()
                 self.tcp_client_socket.sendall(file_data)
 
+            self.tcp_client_socket.sendall(b'FileTransferComplete')
             print(f"File {file_path} sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
