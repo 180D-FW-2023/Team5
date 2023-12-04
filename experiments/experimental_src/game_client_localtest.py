@@ -21,8 +21,8 @@ def main():
 
     while True:
 
-        received_file = "received_path.wav"
-        ftc.receive_file("received_path.wav")
+        received_file="/mnt/c/UCLA/Senior/Capstone/Final_Project/experiments/experimental_src/received_path.wav"
+        ftc.receive_file(received_file)
 
         try:
             with wave.open(received_file, 'rb') as wav_file:
@@ -35,10 +35,7 @@ def main():
             # An error occurred, so it's not a valid WAV file
             os.remove(received_file)
 
-            temp_wav_file = "out.wav"
-            timeit(rbp.record_audio_by_time)(temp_wav_file, record_time=RECORD_TIME)
-            ftc.send_file(temp_wav_file)
-            os.remove(temp_wav_file)
+            ftc.send_file("./test_capstone.wav")
 
 
 

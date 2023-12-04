@@ -163,7 +163,12 @@ def convert_text_to_bear_audio_opt(input_text,
                            acodec="pcm_s16le",
                            ar=16000,
                            )
-    ffmpeg.run(stream)
+    try:
+        ffmpeg.run(stream)
+    except ffmpeg._run.Error as e:
+        print("FFmpeg Error:")
+        print(e)
+        raise
 
     # Remove the intermediate directory
     # os.remove(audio_mp3_path)

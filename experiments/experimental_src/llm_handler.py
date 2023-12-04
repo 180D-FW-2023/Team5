@@ -84,7 +84,7 @@ def translate(trans_block, output_path_num):
     Returns:
     - final_path (str): Output path of the created audio file
     """
-    final_path = tba.convert_text_to_bear_audio_opt(trans_block, output_path_num)
+    final_path = tba.convert_text_to_bear_audio_opt(trans_block, "./output/bear_audio/" + str(output_path_num))
     return final_path
 
 def send_openai_api_request_and_convert_and_play(game_state, server, P=20, min_pieces=8):
