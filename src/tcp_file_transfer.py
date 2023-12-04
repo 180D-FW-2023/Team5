@@ -23,6 +23,8 @@ class FileTransferClient:
             with open(file_path, 'rb') as file:
                 file_data = file.read()
                 self.tcp_client_socket.sendall(file_data)
+
+            self.tcp_client_socket.sendall(b'FileTransferComplete')
             print(f"File {file_path} sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
@@ -32,6 +34,9 @@ class FileTransferClient:
             with open(save_path, 'wb') as file:
                 data = self.tcp_client_socket.recv(1024)
                 while data:
+                    if data == b"FileTransferComplete":
+                        break
+                    
                     file.write(data)
                     data = self.tcp_client_socket.recv(1024)
             print(f"File received and saved at {save_path}")
@@ -69,6 +74,9 @@ class FileTransferServer:
             with open(save_path, 'wb') as file:
                 data = self.tcp_client_socket.recv(1024)
                 while data:
+                    if data == b"FileTransferComplete":
+                        break
+
                     file.write(data)
                     data = self.tcp_client_socket.recv(1024)
             print(f"File received and saved at {save_path}")
@@ -80,6 +88,8 @@ class FileTransferServer:
             with open(file_path, 'rb') as file:
                 file_data = file.read()
                 self.tcp_client_socket.sendall(file_data)
+
+            self.tcp_client_socket.sendall(b'FileTransferComplete')
             print(f"File {file_path} sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
