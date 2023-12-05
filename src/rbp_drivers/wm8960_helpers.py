@@ -49,10 +49,14 @@ def record_audio_by_time(output_file_path, device="default", record_time=10):
 
     f = get_saved_audio_file(output_file_path)
 
-    saved_time = 0
     start_time = time.time()
+
+    first_flag = True
     while True:
         l, data = inp.read()
+        if first_flag:
+            first_flag = False
+            start_time = time.time()
         if l:
             f.writeframes(data)
             time.sleep(.001)
