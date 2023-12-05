@@ -13,7 +13,6 @@ import audio_management as am
 import helper as h
 from helper import timeit
 from constants import *
-from playsound import playsound # for local
 
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
