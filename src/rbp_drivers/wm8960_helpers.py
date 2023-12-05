@@ -127,7 +127,7 @@ def record_audio_by_time(output_file_path, device="default", record_time=10):
     # start Recording
     stream = audio.open(format=FORMAT, channels=CHANNELS,
                     rate=RATE, input=True,
-                    frames_per_buffer=CHUNK, input_device_index=1)
+                    frames_per_buffer=CHUNK)
     frames = []
 
     # Record for RECORD_SECONDS
