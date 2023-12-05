@@ -21,6 +21,9 @@ os.chdir(Path(__file__).parent.parent.resolve())
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)
 
+#TODO: HANDLE TERMINATIONS
+#TODO: STREAM LLM OUTPUT
+
 class GameServer:
     def __init__(self,
                  temp_dir_path=TEMP_DIR,
@@ -55,7 +58,8 @@ class GameServer:
 
     def prompt_and_response_non_stream(self, role="user", prompt=None):
         llm_res = self.prompt_llm_non_stream(role, prompt)
-        client_res = self.get_client_response_non_stream(llm_res)
+        self.send_client_tts(llm_res)
+        client_res = self.get_client_response_non_stream()
 
         return client_res
 
@@ -67,14 +71,19 @@ class GameServer:
 
         return res
 
-    def get_client_response_non_stream(self, audio_text):
-        # play some audio to get response, send to client server, return client response
+    def send_client_tts(self, audio_text):
+        # play some audio to client
         temp_wav_path = self.temp_dir / "temp.wav"
         temp_wav_path = tba.convert_text_to_bear_audio_opt(audio_text, temp_wav_path, self.temp_dir)
-
         if not self.use_local:
             self.fts.send_file(temp_wav_path)
+        else:
+            am.play_audio(temp_wav_path)
+            print(f"ChatGPT says: {audio_text}")
 
+    def get_client_response_non_stream(self):
+        # get a client wav message and process
+        if not self.use_local:
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
             client_wav_path = self.fts.receive_file(client_wav_path)
@@ -82,10 +91,7 @@ class GameServer:
 
             print(f"You say: {client_res}")
         else: # local mode that just takes a user input
-            am.play_audio(temp_wav_path)
-            print(f"ChatGPT says: {audio_text}")
             client_res = input("You respond: ")
-            os.remove(temp_wav_path)
 
         return client_res
 
@@ -97,7 +103,7 @@ class GameServer:
         random_round = False
         while True:
             llm_response = self.prompt_llm_non_stream(prompt=prompt)
-
+            self.send_client_tts(llm_response)
             if "for playing" in llm_response:
                 print("Game is over!")
                 # send termination signal here
