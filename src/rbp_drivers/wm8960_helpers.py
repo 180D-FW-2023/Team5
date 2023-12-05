@@ -49,7 +49,7 @@ class Recorder:
         # Write your new .wav file with built in Python 3 Wave module
         waveFile = wave.open(output_file_path, 'wb')
         waveFile.setnchannels(CHANNELS)
-        waveFile.setsampwidth(self..get_sample_size(FORMAT))
+        waveFile.setsampwidth(self.audio.get_sample_size(FORMAT))
         waveFile.setframerate(RATE)
         waveFile.writeframes(b''.join(frames))
         waveFile.close()
