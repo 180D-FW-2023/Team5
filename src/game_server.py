@@ -28,8 +28,8 @@ class GameServer:
     def __init__(self, 
                  temp_dir_path=TEMP_DIR, 
                  prompts_json_path=PROMPTS_JSON_PATH, 
-                 server_ip=os.getenv["SERVER_IP"],
-                 server_port=os.getenv["SERVER_PORT"],
+                 server_ip=os.getenv("SERVER_IP"),
+                 server_port=os.getenv("SERVER_PORT"),
                  remove_temp=True):
         # general file init``
         self.temp_dir = h.init_temp_storage(temp_dir_path)
