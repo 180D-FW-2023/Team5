@@ -3,25 +3,15 @@ import os
 import struct
 import time
 
-END_SIGNAL = b"FileTransferComplete"
+from abc import ABC, abstractmethod
 # TODO: ADD TIMEOUTS
 
-class FileTransferClient:
+
+class TCPBase(ABC): # abstract class with functionality for sending and receiving files
     def __init__(self, server_ip, server_port, timeout=None):
         self.server_ip = server_ip
         self.server_port = server_port
         self.tcp_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def __del__(self):
-        self.close_connection()
-
-    def connect_to_server(self):
-        try:
-            self.tcp_client_socket.connect((self.server_ip, self.server_port))
-            print(f"Connected to server at {self.server_ip}:{self.server_port}")
-        except Exception as e:
-            print(f"Error connecting to server: {e}")
-            raise
 
     def send_file(self, file_path, timeout=20):
         try:
@@ -34,7 +24,6 @@ class FileTransferClient:
                 file_data = file.read()
                 self.tcp_client_socket.sendall(file_data)
 
-            self.tcp_client_socket.sendall(b'FileTransferComplete')
             print(f"File {file_path} sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
@@ -58,18 +47,33 @@ class FileTransferClient:
         except Exception as e:
             print(f"Error receiving file: {e}")
 
+    @abstractmethod
+    def close_connection(self):
+        pass
+
+    def __del__(self):
+        self.close_connection()
+
+class FileTransferClient(TCPBase):
+    def __init__(self, server_ip, server_port, timeout=None):
+        super().__init__(server_ip, server_port, timeout)
+
+    def connect_to_server(self):
+        try:
+            self.tcp_client_socket.connect((self.server_ip, self.server_port))
+            print(f"Connected to server at {self.server_ip}:{self.server_port}")
+        except Exception as e:
+            print(f"Error connecting to server: {e}")
+            raise
+
     def close_connection(self):
         self.tcp_client_socket.close()
         print("Connection closed.")
 
-class FileTransferServer:
-    def __init__(self, server_ip, server_port):
-        self.server_ip = server_ip
-        self.server_port = server_port
+class FileTransferServer(TCPBase):
+    def __init__(self, server_ip, server_port, timeout=None):
+        super().__init__(server_ip, server_port, timeout)
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def __del__(self):
-        self.close_connection()
 
     def start_server(self):
         try:
@@ -83,42 +87,6 @@ class FileTransferServer:
         except Exception as e:
             print(f"Error starting server: {e}")
             raise
-
-    def receive_file(self, save_path):
-        try:
-            # Receive the file size
-            size_data = self.tcp_client_socket.recv(4)
-            file_size = struct.unpack("!I", size_data)[0]
-
-            received_size = 0
-            with open(save_path, 'wb') as file:
-                while received_size < file_size:
-                    data = self.tcp_client_socket.recv(1024)
-                    if not data:
-                        break
-                    file.write(data)
-                    received_size += len(data)
-
-            print(f"File received and saved at {save_path}")
-        except Exception as e:
-            print(f"Error receiving file: {e}")
-
-    def send_file(self, file_path):
-        try:
-
-            # Send the file size
-            file_size = os.path.getsize(file_path)
-            size_data = struct.pack("!I", file_size)
-            self.tcp_client_socket.sendall(size_data)
-
-            with open(file_path, 'rb') as file:
-                file_data = file.read()
-                self.tcp_client_socket.sendall(file_data)
-
-            self.tcp_client_socket.sendall(b'FileTransferComplete')
-            print(f"File {file_path} sent successfully.")
-        except Exception as e:
-            print(f"Error sending file: {e}")
 
     def close_connection(self):
         self.tcp_client_socket.close()

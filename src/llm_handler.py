@@ -4,6 +4,7 @@ import text_to_bear_audio as tba
 import concurrent.futures
 import time
 import os
+import tcp_speech_server as tcpss
 from dotenv import load_dotenv
 
 # Maunally load environment variables from the .env file
@@ -83,10 +84,10 @@ def translate(trans_block, output_path_num):
     Returns:
     - final_path (str): Output path of the created audio file
     """
-    final_path = tba.convert_text_to_bear_audio(trans_block, output_path_num)
+    final_path = tba.convert_text_to_bear_audio_opt(trans_block, "./output/bear_audio/" + str(output_path_num)+ ".wav")
     return final_path
 
-def send_openai_api_request(game_state, P=20, min_pieces=8):
+def send_openai_api_request_and_convert_and_play(game_state, server, P=20, min_pieces=8):
     """
     Send a new message to GPT 3.5 Turbo LLM including the context of the game so far. Also,
     upon receiving a response in stream mode, convert the text to bear audio and play it
@@ -121,50 +122,49 @@ def send_openai_api_request(game_state, P=20, min_pieces=8):
     #   assigned a translation block, it converts it to speech audio and it and determines the 
     #   length of the audio. Then, it enters a thread queue for playing the audio clips, enforced
     #   by a lock so that only one clip is played at a time and the clips are played in the correct order.
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        for event in response:
+    for event in response:
 
-            # Parse the reponse piece just received
-            curr_piece = event.choices[0].delta.content
+        # Parse the reponse piece just received
+        curr_piece = event.choices[0].delta.content
 
-            # If the reponse piece is not a string, it is a None type and represents the end of the current response stream
-            #   and so in this case, we convert the current in-progress translation chunk
-            if not isinstance(curr_piece, str):
+        # If the reponse piece is not a string, it is a None type and represents the end of the current response stream
+        #   and so in this case, we convert the current in-progress translation chunk
+        if not isinstance(curr_piece, str):
 
-                # Only worry about converting the last in-progress chunk if it is nonempty
-                if len(pieces) > 0:
-                    if pieces[0] != '':
-                        trans_block = ''.join(pieces)
-                        print(trans_block)
-                        full += trans_block
-                        final_path = translate(trans_block, audio_count)
-                        executor.submit(tba.play_wav, final_path)
-            else:
-                if curr_piece == '':
-                    continue
-                
-                # Maintain a list of the pieces that make up the in-progress translation chunk
-                pieces.append(curr_piece)
-                
-                # Once we have obtained a certain number of pieces, begin the conversion process
-                # Current implementation: if this is the first translation block, convert and play it as soon as we have a given number of pieces (P)
-                #   Then, continue collecting new pieces until we get min_pieces pieces and the previous piece has ending punctuation (,.?!). 
-                #   Regardless of if it's the first piece or not the current piece can't contain any punctuation; this minimizes the number of 
-                #   awkward audio pauses.
-                if (((first and len(pieces) >= P + 1) or (len(pieces) > min_pieces and has_ending_punctuation(pieces[-2]))) 
-                    and not has_punctuation(curr_piece)):
-                    
-                    first = False
-                    trans_block = ''.join(pieces[:-1])
-                    # Create current translation block using all but the last of the pieces to ensure that the final piece we translate is not
-                    #  immediately followed by punctuation
+            # Only worry about converting the last in-progress chunk if it is nonempty
+            if len(pieces) > 0:
+                if pieces[0] != '':
+                    trans_block = ''.join(pieces)
                     print(trans_block)
                     full += trans_block
                     final_path = translate(trans_block, audio_count)
+                    tcpss.send_bear_audio_and_receive_raw_audio(final_path, server, end=True)
+        else:
+            if curr_piece == '':
+                continue
+            
+            # Maintain a list of the pieces that make up the in-progress translation chunk
+            pieces.append(curr_piece)
+            
+            # Once we have obtained a certain number of pieces, begin the conversion process
+            # Current implementation: if this is the first translation block, convert and play it as soon as we have a given number of pieces (P)
+            #   Then, continue collecting new pieces until we get min_pieces pieces and the previous piece has ending punctuation (,.?!). 
+            #   Regardless of if it's the first piece or not the current piece can't contain any punctuation; this minimizes the number of 
+            #   awkward audio pauses.
+            if (((first and len(pieces) >= P + 1) or (len(pieces) > min_pieces and has_ending_punctuation(pieces[-2]))) 
+                and not has_punctuation(curr_piece)):
+                
+                first = False
+                trans_block = ''.join(pieces[:-1])
+                # Create current translation block using all but the last of the pieces to ensure that the final piece we translate is not
+                #  immediately followed by punctuation
+                print(trans_block)
+                full += trans_block
+                final_path = translate(trans_block, audio_count)
 
-                    # Reset the last start time to be the time that we last started converting and playing the most recent audio segment
-                    executor.submit(tba.play_wav, final_path)
-                    audio_count += 1
-                    pieces = [pieces[-1]]
+                # Reset the last start time to be the time that we last started converting and playing the most recent audio segment
+                tcpss.send_bear_audio_and_receive_raw_audio(final_path, server, end=False)
+                audio_count += 1
+                pieces = [pieces[-1]]
     return full
                 
