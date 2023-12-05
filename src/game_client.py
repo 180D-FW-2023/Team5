@@ -33,13 +33,13 @@ class GameClient:
         self.ftc.connect_to_server()
     
     def main_loop_non_stream(self):
-        first_run = True
         while True:
             received_file_path = self.temp_dir / "received.wav"
-            if not received_file_path.exists() and not first_run:
-                continue 
 
-            self.ftc.receive_file(received_file_path)
+            received_file_path = self.ftc.receive_file(received_file_path)
+            if received_file_path is None: # handles bad inputs
+                break
+
             rbp.play_audio(received_file_path)
 
             record_file_path = self.temp_dir / "recorded.wav"
@@ -49,8 +49,7 @@ class GameClient:
 
             os.remove(received_file_path)
             os.remove(record_file_path)
-            
-            first_run = False
+
 
     def __del__(self):
         if self.remove_temp:
