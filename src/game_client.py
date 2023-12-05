@@ -9,6 +9,8 @@ import tcp_file_transfer as tcp
 import audio_management as am
 from constants import *
 
+from threading import Thread
+
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
 
@@ -41,10 +43,12 @@ class GameClient:
                 break
 
             am.play_audio(received_file_path)
+            Thread(target=lambda x: am.play_audio(received_file_path)).start()
 
             record_file_path = self.temp_dir / "recorded.wav"
 
             record_file_path = am.record_audio_by_time(record_file_path)
+            Thread(target=lambda x: am.record_audio_by_time(record_file_path)).start()
             self.ftc.send_file(record_file_path)
 
             os.remove(received_file_path)

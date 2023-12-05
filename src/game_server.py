@@ -94,7 +94,7 @@ class GameServer:
 
 def main():
     game_server = GameServer()
-    # game_server.start_server()
+    game_server.start_server()
     story_setting = game_server.initial_game_setup()
     game_server.main_loop_nonstream(story_setting)
     # ROUND 1: GET NAME
