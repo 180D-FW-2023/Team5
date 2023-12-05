@@ -64,7 +64,7 @@ def play_audio(path):
         return False # failed to play
 
     audio = pyaudio.PyAudio()
-    stream = audio.open(format = FORMAT
+    stream = audio.open(format =
                 audio.get_format_from_width(f.getsampwidth()),
                 channels = f.getnchannels(),
                 rate = f.getframerate(),
