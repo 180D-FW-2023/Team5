@@ -1,41 +1,55 @@
-from helper import timeit
+import helper as h
 import tcp_file_transfer as tcp
 import rbp_drivers.wm8960_helpers as rbp
 import os
 import wave
 from pathlib import Path
+from dotenv import load_dotenv
+import shutil
 
-os.chdir(Path(__file__).parent.parent.resolve()) # change to corresponding directory
+from constants import *
 
-#Sets the record time (in seconds) when the RPI listens to the child
-RECORD_TIME = 10
+# change to parent directory to standard directories
+os.chdir(Path(__file__).parent.parent.resolve()) 
+
+# Maunally load environment variables from the .env file
+load_dotenv(DOTENV_PATH)
+
+class GameClient:
+    def __init__(self, 
+                 temp_dir_path=TEMP_DIR, 
+                 server_ip=os.getenv["SERVER_IP"],
+                 server_port=os.getenv["SERVER_PORT"],
+                 record_time=RECORD_TIME, 
+                 remove_temp=True):
+        self.temp_dir = h.init_temp_storage(temp_dir_path)
+
+        self.remove_temp = remove_temp
+
+        self.record_time = record_time
+        
+        #  client setup
+        self.ftc = tcp.FileTransferClient(server_ip, server_port) # connects to server in init
+        self.ftc.connect_to_server()
+    
+    def main_loop_non_stream(self):
+        while True:
+            received_file_path = str(self.temp_dir / "received.wav")
+            self.ftc.receive_file(received_file_path)
+
+            rbp.play_audio(received_file_path)
+            record_file_path = str(self.temp_dir / "recorded.wav")
+
+            record_file_path = rbp.record_audio_by_time(record_file_path)
+            self.ftc.send_file(record_file_path)
+
+    def __del__(self):
+        if self.remove_temp:
+            shutil.rmtree(self.temp_dir)
 
 def main():
-
-    ftc = tcp.FileTransferClient()
-    ftc.connect_to_server()
-
-    while True:
-
-        received_file = "received_path.wav"
-        ftc.receive_file("received_path.wav")
-
-        try:
-            with wave.open(received_file, 'rb') as wav_file:
-                # Check if the file is a valid WAV file
-                if wav_file.getnchannels() > 0:
-                    rbp.play_audio()
-                    os.remove(received_file)
-
-        except wave.Error:
-            # An error occurred, so it's not a valid WAV file
-            os.remove(received_file)
-
-            temp_wav_file = "out.wav"
-            timeit(rbp.record_audio_by_time)(temp_wav_file, record_time=RECORD_TIME)
-            ftc.send_file(temp_wav_file)
-            os.remove(temp_wav_file)
-
+    game_client = GameClient()
+    game_client.main_loop_non_stream()
 
 
 if __name__ == '__main__':

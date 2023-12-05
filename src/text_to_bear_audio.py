@@ -20,6 +20,7 @@ from gtts import gTTS
 from pydub import AudioSegment
 import numpy as np
 from numpy.random import uniform
+from pathlib import Path
 
 from helper import timeit
 
@@ -126,10 +127,11 @@ def convert_text_to_bear_audio(input_text, output_path_num):
 # requires ffmpeg
 def convert_text_to_bear_audio_opt(input_text,
                                    output_path,
+                                   temp_dir_path,
                                    n_semitones=4,
                                    tempo_multiplier=1.3):
 
-    temp_mp3_path = "temp.mp3"
+    temp_mp3_path = temp_dir_path / "tba_conversion.mp3"
 
     text_pieces = [input_text]
 
@@ -168,8 +170,6 @@ def convert_text_to_bear_audio_opt(input_text,
     # Remove the intermediate directory
     # os.remove(audio_mp3_path)
     # os.remove(audio_wav_path)
-
-    os.remove(temp_mp3_path)
 
     return output_path
 

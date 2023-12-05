@@ -65,13 +65,19 @@ def record_audio_by_time(output_file_path, device="default", record_time=10):
 
 def open_audio_file(path):
     path = str(path)
-    f = wave.open(path, "rb")
-    print(f'Output File: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
+    try:
+        f = wave.open(path, "rb")
+        print(f'Output File: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
+    except wave.Error as e:
+        print(e)
+        return None
 
     return f
 
 def play_audio(path, device="default"):
     f = open_audio_file(path)
+    if f is None:
+        return False # failed to play
 
     # 8bit is unsigned in wav files
     if f.getsampwidth() == 1:
@@ -100,6 +106,7 @@ def play_audio(path, device="default"):
         data = f.readframes(periodsize)
 
     f.close()
+    return True
 
 if __name__ == "__main__":
     record_audio_by_time("out.wav")

@@ -7,29 +7,24 @@ from abc import ABC, abstractmethod
 
 from dotenv import load_dotenv
 
-# Manually load environment variables from the .env file
-# Set KEY=<your_api_key> in the .env file for this to work
-dotenv_path = "../.env"
-load_dotenv(dotenv_path)
-SERVER_IP = os.getenv("SERVER_IP")
-SERVER_PORT = int(os.getenv("SERVER_PORT"))
-
 # TODO: ADD TIMEOUTS
 
 
 class TCPBase(ABC): # abstract class with functionality for sending and receiving files
-    def __init__(self, server_ip=SERVER_IP, server_port=SERVER_PORT, timeout=None):
+    def __init__(self, server_ip=None, server_port=None, timeout=None):
         if server_ip is None:
-            print("SETTING SERVER IP TO 0.0.0.0 SINCE DOES NOT EXIST IN ENVIRONMENT")
+            print("SETTING SERVER IP TO 0.0.0.0 SINCE DOES NOT EXIST")
             self.server_ip = "0.0.0.0"
         if server_port is None:
-            print("SETTING SERVER PORT TO 8080 SINCE DOES NOT EXIST IN ENVIRONMENT")
+            print("SETTING SERVER PORT TO 8080 SINCE DOES NOT EXIST")
             self.server_port = 8080
+
         self.server_ip = server_ip
-        self.server_port = server_port
+        self.server_port = int(server_port)
         self.tcp_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def send_file(self, file_path, timeout=20):
+    def send_file(self, file_path):
+        file_path = str(file_path) # for pathlib
         try:
             # Send the file size
             file_size = os.path.getsize(file_path)
@@ -47,6 +42,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         return file_path
 
     def receive_file(self, save_path):
+        file_path = str(file_path) # for pathlib
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
@@ -76,7 +72,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         self.close_connection()
 
 class FileTransferClient(TCPBase):
-    def __init__(self, server_ip=SERVER_IP, server_port=SERVER_PORT, timeout=None):
+    def __init__(self, server_ip=None, server_port=None, timeout=None):
         super().__init__(server_ip, server_port, timeout)
 
     def connect_to_server(self):
@@ -92,7 +88,7 @@ class FileTransferClient(TCPBase):
         print("Connection closed.")
 
 class FileTransferServer(TCPBase):
-    def __init__(self, server_ip=SERVER_IP, server_port=SERVER_PORT, timeout=None):
+    def __init__(self, server_ip=None, server_port=None, timeout=None):
         super().__init__(server_ip, server_port, timeout)
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 

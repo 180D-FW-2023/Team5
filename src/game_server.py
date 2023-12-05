@@ -25,15 +25,20 @@ os.chdir(Path(__file__).parent.parent.resolve())
 load_dotenv(DOTENV_PATH)
 
 class GameServer:
-    def __init__(self, temp_dir_path=TEMP_DIR, prompts_json_path=PROMPTS_JSON_PATH, remove_temp=False):
-        # general file init
+    def __init__(self, 
+                 temp_dir_path=TEMP_DIR, 
+                 prompts_json_path=PROMPTS_JSON_PATH, 
+                 server_ip=os.getenv["SERVER_IP"],
+                 server_port=os.getenv["SERVER_PORT"],
+                 remove_temp=True):
+        # general file init``
         self.temp_dir = h.init_temp_storage(temp_dir_path)
-        self.prompts = h.read_prompts_json(prompts_json_path)
         self.remove_temp = remove_temp
+        self.prompts = h.read_prompts_json(prompts_json_path)
 
         # # file transfer setup
-        # self.fts = tcp.FileTransferClient
-        # self.fts.connect_to_server() # blocks until a client connects
+        self.fts = tcp.FileTransferServer(server_ip, server_port)
+        self.fts.start_server() # blocks until a client connects
 
         self.llm = LLM(os.getenv("KEY"))
 
@@ -58,7 +63,7 @@ class GameServer:
         client_wav_path = str(self.temp_dir / "client_res.wav")
         client_wav_path = self.fts.receive_file(client_wav_path)
         client_res = h.timeit(sp.recognize_wav)(client_wav_path)
-        
+
         print(f"You said: {client_res}")
 
         return client_res
