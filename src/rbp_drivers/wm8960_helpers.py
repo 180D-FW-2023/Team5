@@ -21,40 +21,36 @@ def open_audio_file(path):
 
     return f
 
-class Recorder:
-    def __init__(self):
-        self.audio = pyaudio.PyAudio()
+def record_audio_by_time(output_file_path, device="default", record_time=10):
+    # Startup pyaudio instance
+    audio = pyaudio.PyAudio()
 
-        # start Recording
-        self.stream = self.audio.open(format=FORMAT, channels=CHANNELS,
-                        rate=RATE, input=True,
+    # start Recording
+    stream = audio.open(format=FORMAT, channels=CHANNELS,
+                    rate=RATE, input=True,
                     frames_per_buffer=CHUNK)
+    frames = []
 
-    def __del__(self):
-        self.stream.stop_stream()
-        self.stream.close()
-        self.audio.terminate()
-
-    def record_audio_by_time(self, output_file_path, record_time=10):
-        frames = []
-
-        # Record for RECORD_SECONDS
-        for i in range(0, int(RATE / CHUNK * record_time)):
-            data = self.stream.read(CHUNK)
-            frames.append(data)
+    # Record for RECORD_SECONDS
+    for i in range(0, int(RATE / CHUNK * record_time)):
+        data = stream.read(CHUNK)
+        frames.append(data)
 
 
-        # Stop Recording
+    # Stop Recording
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
 
-        # Write your new .wav file with built in Python 3 Wave module
-        waveFile = wave.open(output_file_path, 'wb')
-        waveFile.setnchannels(CHANNELS)
-        waveFile.setsampwidth(self.audio.get_sample_size(FORMAT))
-        waveFile.setframerate(RATE)
-        waveFile.writeframes(b''.join(frames))
-        waveFile.close()
+    # Write your new .wav file with built in Python 3 Wave module
+    waveFile = wave.open(output_file_path, 'wb')
+    waveFile.setnchannels(CHANNELS)
+    waveFile.setsampwidth(audio.get_sample_size(FORMAT))
+    waveFile.setframerate(RATE)
+    waveFile.writeframes(b''.join(frames))
+    waveFile.close()
 
-        return output_file_path
+    return output_file_path
 
 def play_audio(path, device="default"):
     f = open_audio_file(path)
@@ -85,4 +81,5 @@ def play_audio(path, device="default"):
 
 
 if __name__ == "__main__":
+    record_audio_by_time("out.wav")
     play_audio("out.wav")
