@@ -12,6 +12,8 @@ RECEIVED_PATH = "out.wav"
 
 start = time.time()
 ftc = tcp.FileTransferClient() # uses defaults in environment
+print(ftc.server_ip)
+print(ftc.server_port)
 ftc.connect_to_server()
 ftc.send_file(INPUT_FILE_PATH)
 ftc.receive_file(RECEIVED_PATH)
