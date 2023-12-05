@@ -112,6 +112,45 @@ def play_audio(path, device="default"):
     f.close()
     return True
 
+def record_audio_pyaudio():
+    import pyaudio
+    # Setup channel info
+    FORMAT = pyaudio.paInt16 # data type formate
+    CHANNELS = 2 # Adjust to your number of channels
+    RATE = 16000 # Sample Rate
+    CHUNK = 1024 # Block Size
+    RECORD_SECONDS = 5 # Record time
+    WAVE_OUTPUT_FILENAME = "out.wav"
+
+    # Startup pyaudio instance
+    audio = pyaudio.PyAudio()
+
+    # start Recording
+    stream = audio.open(format=FORMAT, channels=CHANNELS,
+                    rate=RATE, input=True,
+                    frames_per_buffer=CHUNK)
+    frames = []
+
+    # Record for RECORD_SECONDS
+    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = stream.read(CHUNK)
+        frames.append(data)
+
+
+    # Stop Recording
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
+
+    # Write your new .wav file with built in Python 3 Wave module
+    waveFile = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+    waveFile.setnchannels(CHANNELS)
+    waveFile.setsampwidth(audio.get_sample_size(FORMAT))
+    waveFile.setframerate(RATE)
+    waveFile.writeframes(b''.join(frames))
+    waveFile.close()
+
 if __name__ == "__main__":
-    record_audio_by_time("out.wav")
+    record_audio_pyaudio()
+    # record_audio_by_time("out.wav")
     play_audio("out.wav")
