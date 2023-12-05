@@ -30,7 +30,7 @@ class GameServer:
                  prompts_json_path=PROMPTS_JSON_PATH, 
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
-                 remove_temp=True):
+                 remove_temp=False):
         # general file init``
         self.temp_dir = h.init_temp_storage(temp_dir_path)
         self.remove_temp = remove_temp
@@ -55,9 +55,9 @@ class GameServer:
         # prompt chat gpt, get response, send to client server, return client response
         res = self.llm.prompt_llm_non_stream(role="system", prompt=prompt) # initialization prompt
         temp_wav_path = str(self.temp_dir / "temp.wav")
-        temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path)
+        temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
         
-        self.fts.send_file()
+        self.fts.send_file(temp_wav_path)
         
         # client should get stuff here
         client_wav_path = str(self.temp_dir / "client_res.wav")
