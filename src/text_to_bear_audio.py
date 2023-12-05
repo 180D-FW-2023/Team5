@@ -22,6 +22,7 @@ import numpy as np
 from numpy.random import uniform
 from pathlib import Path
 
+from constants import *
 from helper import timeit
 
 # Use pygame to play a wav file using default speaker
@@ -109,7 +110,7 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     octaves = 0.4
     new_sample_rate = int(sound.frame_rate * (2.0 ** octaves))
     hipitch_sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate})
-    hipitch_sound = hipitch_sound.set_frame_rate(16000)
+    hipitch_sound = hipitch_sound.set_frame_rate(RATE)
 
     # Export pitch-changed sound
     pitch_change_path = out_dir + "/bear_voice_" + str(output_path_num) + ".wav"
@@ -145,8 +146,8 @@ def convert_text_to_bear_audio_opt(input_text,
     with open(temp_mp3_path, "wb") as f:
         for text_piece in text_pieces:
             # Text-to-speech and save as WAV
-            tts = timeit(gTTS)(text_piece)
-            timeit(tts.write_to_fp)(f)
+            tts = gTTS(text_piece)
+            timeit(tts.write_to_fp)(f) # actual tts time
 
     # ffmpeg run
     pitch = (2**n_semitones)/12 # frequency ratio of a semitone
@@ -163,8 +164,8 @@ def convert_text_to_bear_audio_opt(input_text,
     stream = stream.output(output_path,
                            preset="ultrafast",
                            acodec="pcm_s16le",
-                           ar=16000,
-                           ac=2
+                           ar=RATE,
+                           ac=CHANNELS
                            )
     ffmpeg.run(stream)
 

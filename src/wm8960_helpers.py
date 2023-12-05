@@ -1,14 +1,11 @@
-from __future__ import print_function
+from constants import *
 
 import time
 import wave
 import pyaudio
-
 # Setup channel info
+
 FORMAT = pyaudio.paInt16 # data type formate
-CHANNELS = 1 # Adjust to your number of channels
-RATE = 16000 # Sample Rate
-CHUNK = 1024 # Block Size
 
 def open_audio_file(path):
     path = str(path)
