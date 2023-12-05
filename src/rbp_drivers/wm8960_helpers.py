@@ -43,29 +43,29 @@ def get_saved_audio_file(output_file_path):
     print(f'Input Device: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
     return f
 
-def record_audio_by_time(output_file_path, device="default", record_time=10):
-    # rough time in s
-    inp = get_input_device(device)
+# def record_audio_by_time(output_file_path, device="default", record_time=10):
+#     # rough time in s
+#     inp = get_input_device(device)
 
-    f = get_saved_audio_file(output_file_path)
+#     f = get_saved_audio_file(output_file_path)
 
-    start_time = time.time()
+#     start_time = time.time()
 
-    first_flag = True
-    while True:
-        l, data = inp.read()
-        if first_flag:
-            first_flag = False
-            start_time = time.time()
-        if l:
-            f.writeframes(data)
-            time.sleep(.001)
-            # saves exactly time ms
-        if time.time() - start_time > record_time:
-            break
-    f.close()
+#     first_flag = True
+#     while True:
+#         l, data = inp.read()
+#         if first_flag:
+#             first_flag = False
+#             start_time = time.time()
+#         if l:
+#             f.writeframes(data)
+#             time.sleep(.001)
+#             # saves exactly time ms
+#         if time.time() - start_time > record_time:
+#             break
+#     f.close()
 
-    return output_file_path
+#     return output_file_path
 
 def open_audio_file(path):
     path = str(path)
@@ -78,50 +78,49 @@ def open_audio_file(path):
 
     return f
 
-def play_audio(path, device="default"):
-    f = open_audio_file(path)
-    if f is None:
-        return False # failed to play
+# def play_audio(path, device="default"):
+#     f = open_audio_file(path)
+#     if f is None:
+#         return False # failed to play
 
-    # 8bit is unsigned in wav files
-    if f.getsampwidth() == 1:
-        format = alsaaudio.PCM_FORMAT_U8
-    # Otherwise we assume signed data, little endian
-    elif f.getsampwidth() == 2:
-        format = alsaaudio.PCM_FORMAT_S16_LE
-    elif f.getsampwidth() == 3:
-        format = alsaaudio.PCM_FORMAT_S24_LE
-    elif f.getsampwidth() == 4:
-        format = alsaaudio.PCM_FORMAT_S32_LE
-    else:
-        raise ValueError('Unsupported format')
+#     # 8bit is unsigned in wav files
+#     if f.getsampwidth() == 1:
+#         format = alsaaudio.PCM_FORMAT_U8
+#     # Otherwise we assume signed data, little endian
+#     elif f.getsampwidth() == 2:
+#         format = alsaaudio.PCM_FORMAT_S16_LE
+#     elif f.getsampwidth() == 3:
+#         format = alsaaudio.PCM_FORMAT_S24_LE
+#     elif f.getsampwidth() == 4:
+#         format = alsaaudio.PCM_FORMAT_S32_LE
+#     else:
+#         raise ValueError('Unsupported format')
 
-    periodsize = f.getframerate() // 8
+#     periodsize = f.getframerate() // 8
 
-    out = alsaaudio.PCM(channels=f.getnchannels(),
-                           rate=f.getframerate(),
-                           format=format,
-                           periodsize=periodsize,
-                           device=device)
-    data = f.readframes(periodsize)
-    while data:
-        # Read data from stdin
-        out.write(data)
-        data = f.readframes(periodsize)
+#     out = alsaaudio.PCM(channels=f.getnchannels(),
+#                            rate=f.getframerate(),
+#                            format=format,
+#                            periodsize=periodsize,
+#                            device=device)
+#     data = f.readframes(periodsize)
+#     while data:
+#         # Read data from stdin
+#         out.write(data)
+#         data = f.readframes(periodsize)
 
-    f.close()
-    return True
+#     f.close()
+#     return True
 
-def record_audio_pyaudio():
-    import pyaudio
-    # Setup channel info
-    FORMAT = pyaudio.paInt16 # data type formate
-    CHANNELS = 2 # Adjust to your number of channels
-    RATE = 16000 # Sample Rate
-    CHUNK = 1024 # Block Size
-    RECORD_SECONDS = 5 # Record time
-    WAVE_OUTPUT_FILENAME = "out.wav"
+import pyaudio
+# Setup channel info
+FORMAT = pyaudio.paInt16 # data type formate
+CHANNELS = 1 # Adjust to your number of channels
+RATE = 16000 # Sample Rate
+CHUNK = 1024 # Block Size
+WAVE_OUTPUT_FILENAME = "out.wav"
 
+def record_audio_by_time(output_file_path, device="default", record_time=10):
     # Startup pyaudio instance
     audio = pyaudio.PyAudio()
 
@@ -132,7 +131,7 @@ def record_audio_pyaudio():
     frames = []
 
     # Record for RECORD_SECONDS
-    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+    for i in range(0, int(RATE / CHUNK * record_time)):
         data = stream.read(CHUNK)
         frames.append(data)
 
@@ -143,14 +142,41 @@ def record_audio_pyaudio():
     audio.terminate()
 
     # Write your new .wav file with built in Python 3 Wave module
-    waveFile = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+    waveFile = wave.open(output_file_path, 'wb')
     waveFile.setnchannels(CHANNELS)
     waveFile.setsampwidth(audio.get_sample_size(FORMAT))
     waveFile.setframerate(RATE)
     waveFile.writeframes(b''.join(frames))
     waveFile.close()
 
+def play_audio(path, device="default"):
+    f = open_audio_file(path)
+    if f is None:
+        return False # failed to play
+    
+    audio = pyaudio.PyAudio()
+    stream = audio.open(format =
+                audio.get_format_from_width(f.getsampwidth()),
+                channels = f.getnchannels(),
+                rate = f.getframerate(),
+                output = True)
+    
+    data = f.readframes(CHUNK)
+
+    # play stream (looping from beginning of file to the end)
+    while data:
+        # writing to the stream is what *actually* plays the sound.
+        stream.write(data)
+        data = f.readframes(CHUNK)
+
+
+    # cleanup stuff.
+    f.close()
+    stream.close()    
+    audio.terminate()
+    return True
+
+
 if __name__ == "__main__":
-    record_audio_pyaudio()
-    # record_audio_by_time("out.wav")
+    record_audio_by_time("out.wav")
     play_audio("out.wav")
