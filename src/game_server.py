@@ -54,15 +54,23 @@ class GameServer:
         return story_setting
 
     def prompt_and_response_non_stream(self, role="user", prompt=None):
-        # prompt chat gpt, get response, send to client server, return client response
+        llm_res = self.prompt_llm_non_stream(role, prompt)
+        client_res = self.get_client_response_non_stream(llm_res)
 
+        return client_res
+
+    def prompt_llm_non_stream(self, role="user", prompt=None):
         if prompt is None: # no prompt ie prob didnt get a response
             res = "Sorry I didn't catch that. Could you say that again?"
         else:
             res = timeit(self.llm.prompt_llm_non_stream)(role=role, prompt=prompt) # initialization prompt
 
+        return res
+
+    def get_client_response_non_stream(self, audio_text):
+        # play some audio to get response, send to client server, return client response
         temp_wav_path = self.temp_dir / "temp.wav"
-        temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
+        temp_wav_path = tba.convert_text_to_bear_audio_opt(audio_text, temp_wav_path, self.temp_dir)
 
         if not self.use_local:
             self.fts.send_file(temp_wav_path)
@@ -75,17 +83,47 @@ class GameServer:
             print(f"You say: {client_res}")
         else: # local mode that just takes a user input
             am.play_audio(temp_wav_path)
-            print(f"ChatGPT says: {res}")
+            print(f"ChatGPT says: {audio_text}")
             client_res = input("You respond: ")
             os.remove(temp_wav_path)
 
         return client_res
 
-
     def main_loop_nonstream(self, initial_prompt):
         prompt = initial_prompt
+
+        # Variables for the game logic
+        random_round_next_round = False
+        random_round = False
         while True:
-            prompt = self.prompt_and_response_non_stream("user", prompt)
+            llm_response = self.prompt_llm(prompt=prompt)
+
+            if "for playing" in llm_response:
+                print("Game is over!")
+                # send termination signal here
+                break
+
+            prompt = self.get_client_response_non_stream(llm_response)
+
+        if random_round_next_round:
+            random_round = True
+            random_round_next_round = False
+
+        # 10% chance of a potentially game ending round
+        if random.randint(1,10) == 1:
+            print("It's random time")
+            self.llm.add_chat_history("system", self.prompts["next_round_random"])
+            random_round_next_round = True
+
+        # If this is a random round, we use randomness to determine if the child keeps playing or not
+        if random_round and random.randint(1,3) == 2:
+            print("FAILURE")
+            self.llm.add_chat_history("system", self.prompts["failure"])
+            random_round = False
+        else:
+            random_round_next_round = False
+            random_round = False
+
 
     def __del__(self):
         if self.remove_temp:

@@ -18,7 +18,6 @@ import shutil
 import ffmpeg
 from gtts import gTTS
 from pydub import AudioSegment
-from pathlib import Path
 
 from helper import timeit
 from constants import *

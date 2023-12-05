@@ -8,6 +8,9 @@ DOTENV_PATH = ".env" # check in src
 RECORD_TIME = 10 # seconds to record childs response
 
 # recording settings
-CHANNELS = 1 # Adjust to your number of channels
-RATE = 16000 # Sample Rate
+CHANNELS = 2 # Adjust to your number of channels
+RATE = 44100 # Sample Rate
 CHUNK = 1024 # Block Size
+
+# game logic
+ENDING_STRING = "for playing" # chat gpt phrase that signals end

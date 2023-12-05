@@ -29,6 +29,14 @@ class LLM:
 
         self.chat_history.append(history)
 
+    def get_last_message(self, role=None):
+        if role is None:
+            return self.chat_history[-1]
+        else:
+            for chat_log in self.chat_history[::-1]:
+                if chat_log["role"] == role:
+                    return chat_log["content"]
+
     def reset_chat_history(self):
         self.chat_history = []
 
