@@ -18,10 +18,9 @@ import shutil
 import ffmpeg
 from gtts import gTTS
 from pydub import AudioSegment
-import numpy as np
-from numpy.random import uniform
 
 from helper import timeit
+from constants import *
 
 # Use pygame to play a wav file using default speaker
 def play_wav(wav_path):
@@ -108,7 +107,7 @@ def convert_text_to_bear_audio(input_text, output_path_num):
     octaves = 0.4
     new_sample_rate = int(sound.frame_rate * (2.0 ** octaves))
     hipitch_sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate})
-    hipitch_sound = hipitch_sound.set_frame_rate(16000)
+    hipitch_sound = hipitch_sound.set_frame_rate(RATE)
 
     # Export pitch-changed sound
     pitch_change_path = out_dir + "/bear_voice_" + str(output_path_num) + ".wav"
@@ -126,10 +125,11 @@ def convert_text_to_bear_audio(input_text, output_path_num):
 # requires ffmpeg
 def convert_text_to_bear_audio_opt(input_text,
                                    output_path,
+                                   temp_dir_path,
                                    n_semitones=4,
                                    tempo_multiplier=1.3):
 
-    temp_mp3_path = "temp.mp3"
+    temp_mp3_path = temp_dir_path / "tba_conversion.mp3"
 
     text_pieces = [input_text]
 
@@ -143,8 +143,8 @@ def convert_text_to_bear_audio_opt(input_text,
     with open(temp_mp3_path, "wb") as f:
         for text_piece in text_pieces:
             # Text-to-speech and save as WAV
-            tts = timeit(gTTS)(text_piece)
-            timeit(tts.write_to_fp)(f)
+            tts = gTTS(text_piece)
+            timeit(tts.write_to_fp)(f) # actual tts time
 
     # ffmpeg run
     pitch = (2**n_semitones)/12 # frequency ratio of a semitone
@@ -158,18 +158,17 @@ def convert_text_to_bear_audio_opt(input_text,
                            pitch=pitch,
                            tempo=tempo_multiplier
                            )
-    stream = stream.output(output_path,
+    stream = stream.output(str(output_path),
                            preset="ultrafast",
                            acodec="pcm_s16le",
-                           ar=16000,
+                           ar=RATE,
+                           ac=CHANNELS
                            )
     ffmpeg.run(stream)
 
     # Remove the intermediate directory
     # os.remove(audio_mp3_path)
     # os.remove(audio_wav_path)
-
-    os.remove(temp_mp3_path)
 
     return output_path
 

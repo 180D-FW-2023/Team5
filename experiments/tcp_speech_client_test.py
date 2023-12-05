@@ -4,14 +4,16 @@ import os
 import time
 
 import tcp_file_transfer as tcp
-import rbp_drivers.wm8960_helpers as rbp
+import wm8960_helpers as rbp
 from helper import timeit
 
 INPUT_FILE_PATH = "../test_data/test_capstone.wav"
 RECEIVED_PATH = "out.wav"
 
 start = time.time()
-ftc = tcp.FileTransferClient("192.168.99.31", 12345)
+ftc = tcp.FileTransferClient() # uses defaults in environment
+print(ftc.server_ip)
+print(ftc.server_port)
 ftc.connect_to_server()
 ftc.send_file(INPUT_FILE_PATH)
 ftc.receive_file(RECEIVED_PATH)
