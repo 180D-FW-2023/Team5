@@ -31,11 +31,12 @@ def record_audio_by_time(output_file_path, device="default", record_time=10):
 
     # Record for RECORD_SECONDS
     initial_run = True
+    start = time.time()
     for i in range(0, int(RATE / CHUNK * record_time)):
         data = stream.read(CHUNK)
         if initial_run:
             initial_run = False
-            print("\n\nSTARTED RECORDING\n\n")
+            print(f"\n\nSTARTED RECORDING DELAY BETWEEN START AND RECORDING: {time.time()-start}\n\n")
         frames.append(data)
 
 

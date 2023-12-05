@@ -2,6 +2,7 @@ import random
 from pathlib import Path
 
 import helper as h
+from helper import timeit
 
 from llm_handler import LLM
 import speech_processing as sp
@@ -38,13 +39,18 @@ class GameServer:
 
         # # file transfer setup
         self.fts = tcp.FileTransferServer(server_ip, server_port)
-        self.fts.start_server() # blocks until a client connects
 
         self.llm = LLM(os.getenv("KEY"))
 
+        self.use_local = True # flag if server isnt started to run a local version for debugging/testing
+
+    def start_server(self):
+        self.fts.start_server() # blocks until a client connects
+        self.use_local = False
+
     def initial_game_setup(self):
         # getting the players name
-        user_name = self.prompt_and_response_non_stream("user", self.prompts["init"])
+        user_name = self.prompt_and_response_non_stream("system", self.prompts["init"])
 
         # prompting user for the story setting
         story_setting = self.prompt_and_response_non_stream("user", user_name)
@@ -54,24 +60,29 @@ class GameServer:
     def prompt_and_response_non_stream(self, role="user", prompt=None):
         # prompt chat gpt, get response, send to client server, return client response
 
-        if prompt is None: # no prompt
+        if prompt is None: # no prompt ie prob didnt get a response
             res = "Sorry I didn't catch that. Could you say that again?"
         else:
-            res = self.llm.prompt_llm_non_stream(role="system", prompt=prompt) # initialization prompt
-            
-        temp_wav_path = str(self.temp_dir / "temp.wav")
-        temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
+            res = timeit(self.llm.prompt_llm_non_stream)(role=role, prompt=prompt) # initialization prompt
 
-        self.fts.send_file(temp_wav_path)
+        if not self.use_local:
+            temp_wav_path = str(self.temp_dir / "temp.wav")
+            temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
 
-        # client should get stuff here
-        client_wav_path = str(self.temp_dir / "client_res.wav")
-        client_wav_path = self.fts.receive_file(client_wav_path)
-        client_res = h.timeit(sp.recognize_wav)(client_wav_path)
+            self.fts.send_file(temp_wav_path)
 
-        print(f"You said: {client_res}")
+            # client should get stuff here
+            client_wav_path = str(self.temp_dir / "client_res.wav")
+            client_wav_path = self.fts.receive_file(client_wav_path)
+            client_res = timeit(sp.recognize_wav)(client_wav_path)
+
+            print(f"You say: {client_res}")
+        else: # local mode that just takes a user input
+            print(f"ChatGPT says: {res}")
+            client_res = input("You respond: ")
 
         return client_res
+
 
     def main_loop_nonstream(self, initial_prompt):
         prompt = initial_prompt
@@ -84,8 +95,8 @@ class GameServer:
 
 
 def main():
-
     game_server = GameServer()
+    game_server.start_server()
     story_setting = game_server.initial_game_setup()
     game_server.main_loop_nonstream(story_setting)
     # ROUND 1: GET NAME
