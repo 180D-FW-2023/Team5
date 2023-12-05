@@ -42,7 +42,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         return file_path
 
     def receive_file(self, save_path):
-        file_path = str(file_path) # for pathlib
+        save_path = str(save_path) # for pathlib
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
