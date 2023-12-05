@@ -3,6 +3,9 @@ import tcp_file_transfer as tcp
 import rbp_drivers.wm8960_helpers as rbp
 import os
 import wave
+from pathlib import Path
+
+os.chdir(Path(__file__).parent.parent.resolve()) # change to corresponding directory
 
 #Sets the record time (in seconds) when the RPI listens to the child
 RECORD_TIME = 10

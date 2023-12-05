@@ -43,6 +43,8 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             print(f"File {file_path} sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
+        
+        return file_path
 
     def receive_file(self, save_path):
         try:
@@ -62,6 +64,9 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             print(f"File received and saved at {save_path}")
         except Exception as e:
             print(f"Error receiving file: {e}")
+            return None
+        
+        return save_path
 
     @abstractmethod
     def close_connection(self):

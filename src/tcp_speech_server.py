@@ -15,8 +15,6 @@ SERVER_IP = "127.0.0.1"
 FIRST = True
 
 def init_server():
-    fts = tcp.FileTransferServer()
-    fts.start_server()
     return fts
 
 def send_bear_audio_and_receive_raw_audio(bear_audio_path, fts, end=False):
