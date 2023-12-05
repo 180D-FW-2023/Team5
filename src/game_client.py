@@ -42,12 +42,12 @@ class GameClient:
             if received_file_path is None: # handles bad inputs
                 break
 
-            am.play_audio(received_file_path)
+            # am.play_audio(received_file_path)
             Thread(target=lambda x: am.play_audio(received_file_path)).start()
 
             record_file_path = self.temp_dir / "recorded.wav"
 
-            record_file_path = am.record_audio_by_time(record_file_path)
+            # record_file_path = am.record_audio_by_time(record_file_path)
             Thread(target=lambda x: am.record_audio_by_time(record_file_path)).start()
             self.ftc.send_file(record_file_path)
 
