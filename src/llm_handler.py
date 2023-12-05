@@ -1,10 +1,8 @@
-from openai import OpenAI
 import string
+
+from openai import OpenAI
+
 import text_to_bear_audio as tba
-import concurrent.futures
-import time
-import os
-import tcp_speech_server as tcpss
 
 
 class LLM:

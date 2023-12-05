@@ -1,12 +1,12 @@
+import os
+import shutil
+from pathlib import Path
+
+from dotenv import load_dotenv
+
 import helper as h
 import tcp_file_transfer as tcp
-import wm8960_helpers as rbp
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-import shutil
-import time
-
+import audio_management as am
 from constants import *
 
 # change to parent directory to standard directories
@@ -40,11 +40,11 @@ class GameClient:
             if received_file_path is None: # handles bad inputs
                 break
 
-            rbp.play_audio(received_file_path)
+            am.play_audio(received_file_path)
 
             record_file_path = self.temp_dir / "recorded.wav"
 
-            record_file_path = rbp.record_audio_by_time(record_file_path)
+            record_file_path = am.record_audio_by_time(record_file_path)
             self.ftc.send_file(record_file_path)
 
             os.remove(received_file_path)

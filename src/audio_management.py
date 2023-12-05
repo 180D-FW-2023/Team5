@@ -1,9 +1,8 @@
-from constants import *
-
 import time
 import wave
 import pyaudio
-# Setup channel info
+
+from constants import *
 
 FORMAT = pyaudio.paInt16 # data type formate
 
@@ -18,7 +17,7 @@ def open_audio_file(path):
 
     return f
 
-def record_audio_by_time(output_file_path, device="default", record_time=10):
+def record_audio_by_time(output_file_path, record_time=5):
     output_file_path = str(output_file_path)
     # Startup pyaudio instance
     audio = pyaudio.PyAudio()

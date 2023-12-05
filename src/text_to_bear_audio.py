@@ -18,12 +18,10 @@ import shutil
 import ffmpeg
 from gtts import gTTS
 from pydub import AudioSegment
-import numpy as np
-from numpy.random import uniform
 from pathlib import Path
 
-from constants import *
 from helper import timeit
+from constants import *
 
 # Use pygame to play a wav file using default speaker
 def play_wav(wav_path):
@@ -161,7 +159,7 @@ def convert_text_to_bear_audio_opt(input_text,
                            pitch=pitch,
                            tempo=tempo_multiplier
                            )
-    stream = stream.output(output_path,
+    stream = stream.output(str(output_path),
                            preset="ultrafast",
                            acodec="pcm_s16le",
                            ar=RATE,

@@ -1,7 +1,6 @@
 import socket
 import os
 import struct
-import time
 
 from abc import ABC, abstractmethod
 
@@ -38,7 +37,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             print(f"File {file_path} sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
-        
+
         return file_path
 
     def receive_file(self, save_path):
@@ -61,7 +60,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         except Exception as e:
             print(f"Error receiving file: {e}")
             return None
-        
+
         return save_path
 
     @abstractmethod

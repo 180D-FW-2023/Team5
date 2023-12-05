@@ -1,5 +1,3 @@
-import random
-import time
 import speech_recognition as sr
 
 # Converts the recorded audio to text
@@ -70,7 +68,7 @@ def recognize_wav(file_path):
         # Using Google Web Speech API
         text = recognizer.recognize_google(audio_data)
         print("Text from WAV file:", text)
-       
+
         return text
     except sr.UnknownValueError:
         print("Could not understand audio.")

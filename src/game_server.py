@@ -1,23 +1,19 @@
 import random
 from pathlib import Path
-
-import helper as h
-from helper import timeit
+import shutil
+from dotenv import load_dotenv
+import os
 
 from llm_handler import LLM
 import speech_processing as sp
 import text_to_bear_audio as tba
 import tcp_file_transfer as tcp
-import os
-import tcp_speech_server as tcpss
+import audio_management as am
 
-import sys
-import json
-import shutil
-
-from dotenv import load_dotenv
-
+import helper as h
+from helper import timeit
 from constants import *
+from playsound import playsound # for local
 
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
@@ -65,21 +61,23 @@ class GameServer:
         else:
             res = timeit(self.llm.prompt_llm_non_stream)(role=role, prompt=prompt) # initialization prompt
 
-        if not self.use_local:
-            temp_wav_path = str(self.temp_dir / "temp.wav")
-            temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
+        temp_wav_path = self.temp_dir / "temp.wav"
+        temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
 
+        if not self.use_local:
             self.fts.send_file(temp_wav_path)
 
             # client should get stuff here
-            client_wav_path = str(self.temp_dir / "client_res.wav")
+            client_wav_path = self.temp_dir / "client_res.wav"
             client_wav_path = self.fts.receive_file(client_wav_path)
             client_res = timeit(sp.recognize_wav)(client_wav_path)
 
             print(f"You say: {client_res}")
         else: # local mode that just takes a user input
+            am.play_audio(temp_wav_path)
             print(f"ChatGPT says: {res}")
             client_res = input("You respond: ")
+            os.remove(temp_wav_path)
 
         return client_res
 
@@ -96,7 +94,7 @@ class GameServer:
 
 def main():
     game_server = GameServer()
-    game_server.start_server()
+    # game_server.start_server()
     story_setting = game_server.initial_game_setup()
     game_server.main_loop_nonstream(story_setting)
     # ROUND 1: GET NAME
