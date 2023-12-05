@@ -12,9 +12,6 @@ import tcp_speech_server as tcpss
 #Sets the record time (in seconds) when the RPI listens to the child
 RECORD_TIME = 10
 
-#IP Address of this TCP server
-SERVER_IP = "127.0.0.1"
-
 RECEIVED_FILE_PATH = "temp.wav"
 
 def main():

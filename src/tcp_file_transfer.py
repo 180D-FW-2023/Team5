@@ -20,11 +20,11 @@ SERVER_PORT = int(os.getenv("SERVER_PORT"))
 class TCPBase(ABC): # abstract class with functionality for sending and receiving files
     def __init__(self, server_ip=SERVER_IP, server_port=SERVER_PORT, timeout=None):
         if server_ip is None:
-            print("SETTING SERVER IP TO 255.255.255.255 SINCE DOES NOT EXIST IN ENVIRONMENT")
-            self.server_ip = "255.255.255.255"
+            print("SETTING SERVER IP TO 0.0.0.0 SINCE DOES NOT EXIST IN ENVIRONMENT")
+            self.server_ip = "0.0.0.0"
         if server_port is None:
-            print("SETTING SERVER PORT TO 12345 SINCE DOES NOT EXIST IN ENVIRONMENT")
-            self.server_port = 12345
+            print("SETTING SERVER PORT TO 8080 SINCE DOES NOT EXIST IN ENVIRONMENT")
+            self.server_port = 8080
         self.server_ip = server_ip
         self.server_port = server_port
         self.tcp_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

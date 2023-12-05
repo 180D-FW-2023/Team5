@@ -15,7 +15,7 @@ SERVER_IP = "127.0.0.1"
 FIRST = True
 
 def init_server():
-    fts = tcp.FileTransferServer(SERVER_IP, 12345)
+    fts = tcp.FileTransferServer()
     fts.start_server()
     return fts
 
