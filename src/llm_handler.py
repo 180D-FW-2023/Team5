@@ -13,10 +13,10 @@ class LLM:
         # Defaults to getting the key using os.environ.get("OPENAI_API_KEY") in .env file
         # However, sometimes this causes trouble so setting api_key=key ensures the correct key is selected
         self.client = OpenAI(api_key=key)
-        
+
         # handles chat history
         self.chat_history = [] # ordered by statements
-    
+
     def add_chat_history(self, role, text=None):
         # system tells chatgpt how to act
         # assistant is chatgpt
@@ -34,7 +34,7 @@ class LLM:
     def reset_chat_history(self):
         self.chat_history = []
 
-    def prompt_llm_non_stream(self, role="user", prompt=None):
+    def prompt_llm_non_stream(self, role="user", prompt=""):
         """
         Send a new message to GPT 3.5 Turbo LLM including the context of the game so far. Returns a full
         string when the entire response is complete
@@ -46,11 +46,15 @@ class LLM:
         Returns:
         - full (str): The response from GPT 3.5 Turbo.
         """
+        if prompt is None:
+            print("NO PROMPT GIVEN")
+            return None
 
-        if prompt is not None:
+        if prompt != "":
             # repeat the existing chat history
             self.add_chat_history(role, prompt)
-
+        else:
+            print("EMPTY PROMPT GIVEN. RERUNNING THE PREVIOUS CHAT HISTORY")
         # Create an OpenAI API request for GPT 3.5 Turbo
         res = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -64,7 +68,7 @@ class LLM:
         self.add_chat_history(res_role, res_msg)
 
         return res_msg
-            
+
     def has_punctuation(self, input_string):
         """
         Check if the given input string contains any punctuation characters.
@@ -95,7 +99,7 @@ class LLM:
         - input_string (str): The string to be checked for punctuation.
 
         Returns:
-        - bool: True if the input string contains at least one of the punctuation 
+        - bool: True if the input string contains at least one of the punctuation
                 characters, False otherwise.
 
         Examples:
@@ -105,9 +109,9 @@ class LLM:
         >>> has_punctuation("There's no ending punctuation here")
         False
         """
-        return ((',' in input_string) or 
-                ('.' in input_string) or 
-                ('?' in input_string) or 
+        return ((',' in input_string) or
+                ('.' in input_string) or
+                ('?' in input_string) or
                 ('!' in input_string))
 
 def translate(trans_block, output_path_num):
@@ -153,11 +157,11 @@ def translate(trans_block, output_path_num):
 #     full = ''
 #     audio_count = 0
 #     first = True
-    
+
 #     # We take a multithreaded approach to handle reponses
 #     # The idea is to constantly have one thread reading in new reponse pieces while
 #     #   assigning other threads to each translation block. Once a thread has been
-#     #   assigned a translation block, it converts it to speech audio and it and determines the 
+#     #   assigned a translation block, it converts it to speech audio and it and determines the
 #     #   length of the audio. Then, it enters a thread queue for playing the audio clips, enforced
 #     #   by a lock so that only one clip is played at a time and the clips are played in the correct order.
 #     for event in response:
@@ -180,18 +184,18 @@ def translate(trans_block, output_path_num):
 #         else:
 #             if curr_piece == '':
 #                 continue
-            
+
 #             # Maintain a list of the pieces that make up the in-progress translation chunk
 #             pieces.append(curr_piece)
-            
+
 #             # Once we have obtained a certain number of pieces, begin the conversion process
 #             # Current implementation: if this is the first translation block, convert and play it as soon as we have a given number of pieces (P)
-#             #   Then, continue collecting new pieces until we get min_pieces pieces and the previous piece has ending punctuation (,.?!). 
-#             #   Regardless of if it's the first piece or not the current piece can't contain any punctuation; this minimizes the number of 
+#             #   Then, continue collecting new pieces until we get min_pieces pieces and the previous piece has ending punctuation (,.?!).
+#             #   Regardless of if it's the first piece or not the current piece can't contain any punctuation; this minimizes the number of
 #             #   awkward audio pauses.
-#             if (((first and len(pieces) >= P + 1) or (len(pieces) > min_pieces and has_ending_punctuation(pieces[-2]))) 
+#             if (((first and len(pieces) >= P + 1) or (len(pieces) > min_pieces and has_ending_punctuation(pieces[-2])))
 #                 and not has_punctuation(curr_piece)):
-                
+
 #                 first = False
 #                 trans_block = ''.join(pieces[:-1])
 #                 # Create current translation block using all but the last of the pieces to ensure that the final piece we translate is not
@@ -205,4 +209,3 @@ def translate(trans_block, output_path_num):
 #                 audio_count += 1
 #                 pieces = [pieces[-1]]
 #     return full
-                

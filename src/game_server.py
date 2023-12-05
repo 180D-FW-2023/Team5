@@ -3,7 +3,7 @@ from pathlib import Path
 
 import helper as h
 
-from llm_handler import LLM 
+from llm_handler import LLM
 import speech_processing as sp
 import text_to_bear_audio as tba
 import tcp_file_transfer as tcp
@@ -19,15 +19,15 @@ from dotenv import load_dotenv
 from constants import *
 
 # change to parent directory to standard directories
-os.chdir(Path(__file__).parent.parent.resolve()) 
+os.chdir(Path(__file__).parent.parent.resolve())
 
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)
 
 class GameServer:
-    def __init__(self, 
-                 temp_dir_path=TEMP_DIR, 
-                 prompts_json_path=PROMPTS_JSON_PATH, 
+    def __init__(self,
+                 temp_dir_path=TEMP_DIR,
+                 prompts_json_path=PROMPTS_JSON_PATH,
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
                  remove_temp=False):
@@ -45,20 +45,25 @@ class GameServer:
     def initial_game_setup(self):
         # getting the players name
         user_name = self.prompt_and_response_non_stream("user", self.prompts["init"])
-        
+
         # prompting user for the story setting
         story_setting = self.prompt_and_response_non_stream("user", user_name)
-        
+
         return story_setting
 
     def prompt_and_response_non_stream(self, role="user", prompt=None):
         # prompt chat gpt, get response, send to client server, return client response
-        res = self.llm.prompt_llm_non_stream(role="system", prompt=prompt) # initialization prompt
-        temp_wav_path = str(self.temp_dir / "temp.wav")
+
+        if prompt is None: # no prompt
+            res = "Sorry I didn't catch that. Could you say that again?"
+        else:
+            res = self.llm.prompt_llm_non_stream(role="system", prompt=prompt) # initialization prompt
+            
         temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
-        
+        temp_wav_path = str(self.temp_dir / "temp.wav")
+
         self.fts.send_file(temp_wav_path)
-        
+
         # client should get stuff here
         client_wav_path = str(self.temp_dir / "client_res.wav")
         client_wav_path = self.fts.receive_file(client_wav_path)
@@ -110,7 +115,7 @@ def main():
     # os.remove(RECEIVED_FILE_PATH)
     # print("you said: " + speech)
     # game_state.append(llm_h.create_game_state_addition("user", speech))
-    
+
     # # Variables for the game logic
     # random_round_next_round = False
     # random_round = False
@@ -146,8 +151,8 @@ def main():
 
     #     # If this is a random round, we use randomness to determine if the child keeps playing or not
     #     if random_round and random.randint(1,3) == 2:
-    #         speech += """ (By the way, the child chose the wrong option this round so the game should end. Come up with a kid friendly 
-    #                     reason why the child lost the game and tell them thanks for playing. Don't start the response by saying great 
+    #         speech += """ (By the way, the child chose the wrong option this round so the game should end. Come up with a kid friendly
+    #                     reason why the child lost the game and tell them thanks for playing. Don't start the response by saying great
     #                     job, since they lost game.)
     #                     """
     #         random_round = False

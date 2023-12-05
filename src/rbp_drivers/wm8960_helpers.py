@@ -62,14 +62,14 @@ def play_audio(path):
     f = open_audio_file(path)
     if f is None:
         return False # failed to play
-    
+
     audio = pyaudio.PyAudio()
-    stream = audio.open(format =
+    stream = audio.open(format = FORMAT
                 audio.get_format_from_width(f.getsampwidth()),
                 channels = f.getnchannels(),
                 rate = f.getframerate(),
                 output = True)
-    
+
     data = f.readframes(CHUNK)
 
     # play stream (looping from beginning of file to the end)
@@ -81,7 +81,7 @@ def play_audio(path):
 
     # cleanup stuff.
     f.close()
-    stream.close()    
+    stream.close()
     audio.terminate()
     return True
 
