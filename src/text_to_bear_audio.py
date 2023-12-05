@@ -164,6 +164,7 @@ def convert_text_to_bear_audio_opt(input_text,
                            preset="ultrafast",
                            acodec="pcm_s16le",
                            ar=16000,
+                           ac=2
                            )
     ffmpeg.run(stream)
 

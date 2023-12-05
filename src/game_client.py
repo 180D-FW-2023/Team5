@@ -36,7 +36,6 @@ class GameClient:
         while True:
             received_file_path = str(self.temp_dir / "received.wav")
             self.ftc.receive_file(received_file_path)
-
             rbp.play_audio(received_file_path)
             record_file_path = str(self.temp_dir / "recorded.wav")
 
