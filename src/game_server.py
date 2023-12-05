@@ -59,8 +59,8 @@ class GameServer:
         else:
             res = self.llm.prompt_llm_non_stream(role="system", prompt=prompt) # initialization prompt
             
-        temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
         temp_wav_path = str(self.temp_dir / "temp.wav")
+        temp_wav_path = tba.convert_text_to_bear_audio_opt(res, temp_wav_path, self.temp_dir)
 
         self.fts.send_file(temp_wav_path)
 

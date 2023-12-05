@@ -4,7 +4,7 @@ import os
 import time
 
 import tcp_file_transfer as tcp
-import rbp_drivers.wm8960_helpers as rbp
+import wm8960_helpers as rbp
 from helper import timeit
 
 INPUT_FILE_PATH = "../test_data/test_capstone.wav"

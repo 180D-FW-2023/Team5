@@ -1,6 +1,6 @@
 import helper as h
 import tcp_file_transfer as tcp
-import rbp_drivers.wm8960_helpers as rbp
+import wm8960_helpers as rbp
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -10,28 +10,28 @@ import time
 from constants import *
 
 # change to parent directory to standard directories
-os.chdir(Path(__file__).parent.parent.resolve()) 
+os.chdir(Path(__file__).parent.parent.resolve())
 
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)
 
 class GameClient:
-    def __init__(self, 
-                 temp_dir_path=TEMP_DIR, 
+    def __init__(self,
+                 temp_dir_path=TEMP_DIR,
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
-                 record_time=RECORD_TIME, 
+                 record_time=RECORD_TIME,
                  remove_temp=False):
         self.temp_dir = h.init_temp_storage(temp_dir_path)
 
         self.remove_temp = remove_temp
 
         self.record_time = record_time
-        
+
         #  client setup
         self.ftc = tcp.FileTransferClient(server_ip, server_port) # connects to server in init
         self.ftc.connect_to_server()
-    
+
     def main_loop_non_stream(self):
         while True:
             received_file_path = self.temp_dir / "received.wav"
