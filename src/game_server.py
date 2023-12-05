@@ -46,7 +46,7 @@ class GameServer:
         self.fts.start_server() # blocks until a client connects
         self.use_local = False
 
-    def initial_game_setup(self):
+    def initiate_game(self):
         # getting the players name
         user_name = self.prompt_and_response_non_stream("system", self.prompts["init"])
 
@@ -136,7 +136,7 @@ class GameServer:
 def main():
     game_server = GameServer()
     game_server.start_server()
-    story_setting = game_server.initial_game_setup()
+    story_setting = game_server.initiate_game()
     game_server.main_loop_non_stream(story_setting)
 
 if __name__ == '__main__':
