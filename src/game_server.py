@@ -108,7 +108,7 @@ class GameServer:
                 # send termination signal here
                 break
 
-            prompt = self.get_client_response_non_stream(llm_response)
+            prompt = self.get_client_response_non_stream()
 
         if random_round_next_round:
             random_round = True
