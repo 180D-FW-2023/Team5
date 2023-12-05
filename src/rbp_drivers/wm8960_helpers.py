@@ -22,6 +22,7 @@ def open_audio_file(path):
     return f
 
 def record_audio_by_time(output_file_path, device="default", record_time=10):
+    output_file_path = str(output_file_path)
     # Startup pyaudio instance
     audio = pyaudio.PyAudio()
 
@@ -52,7 +53,8 @@ def record_audio_by_time(output_file_path, device="default", record_time=10):
 
     return output_file_path
 
-def play_audio(path, device="default"):
+def play_audio(path):
+    path = str(path)
     f = open_audio_file(path)
     if f is None:
         return False # failed to play

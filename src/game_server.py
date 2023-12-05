@@ -68,8 +68,10 @@ class GameServer:
 
         return client_res
 
-    def get_client_package(self):
-        self.fts.receive_file()
+    def main_loop_nonstream(self, initial_prompt):
+        prompt = initial_prompt
+        while True:
+            prompt = self.prompt_and_response_non_stream("user", prompt)
 
     def __del__(self):
         if self.remove_temp:
@@ -80,6 +82,7 @@ def main():
 
     game_server = GameServer()
     game_server.initial_game_setup()
+    game_server.main_loop_nonstream()
     # ROUND 1: GET NAME
     # Add initial prompt to game state
 
