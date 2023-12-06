@@ -7,14 +7,6 @@ import random
 import time
 
 def main():
-    #Test call to speech recognition program
-    average = 0
-    for i in range(10):
-        start = time.time()
-        sp.recognize_wav("test/test_capstone.wav")
-        average += time.time() - start
-    print(str(average / 10))
-    return
     """
     Runs the choose your own adventure game.
     """
