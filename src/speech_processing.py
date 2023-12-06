@@ -1,5 +1,11 @@
 import speech_recognition as sr
-import concurrent.futures
+import vosk
+import wave
+import os
+import json
+import subprocess
+
+SAMPLE_RATE = 16000
 
 # Converts the recorded audio to text
 def recognize_speech_from_mic(recognizer, microphone):
@@ -76,5 +82,51 @@ def recognize_wav(file_path):
     except sr.RequestError as e:
         print(f"Error with the request to Google Speech Recognition service; {e}")
 
+
+def recognize_wav_vosk(file_path):
+    # Initialize Vosk
+    vosk.SetLogLevel(-1)
+    model_path = r'C:\Users\niklb\Downloads\vosk-model-small-en-us-0.15\vosk-model-small-en-us-0.15'
+    if not os.path.exists(model_path):
+        print(f"Model not found: {model_path}")
+        return -1
+
+    model = vosk.Model(model_path)
+
+    with wave.open(file_path, "wb") as wf:
+        wf.setnchannels(1)
+
+    # Load an audio file
+    wf = wave.open(file_path, "rb")
+
+    # if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
+    #     print("Audio file must be WAV format mono PCM.")
+    #     return -1
+
+    recognizer = vosk.KaldiRecognizer(model, SAMPLE_RATE)
+    # recognizer.SetWords(True)
+    # recognizer.SetPartialWords(True)
+
+    speech = ""
+
+    with subprocess.Popen(["ffmpeg", "-loglevel", "quiet", "-i",
+                            file_path, "-ar", str(SAMPLE_RATE) , "-ac", "1", "-f", "s16le", "-"],
+                            stdout=subprocess.PIPE) as process:
+        # Process the audio
+        while True:
+            data = process.stdout.read(4000)
+            if len(data) == 0:
+                break
+            if recognizer.AcceptWaveform(data):
+                result = recognizer.Result()
+                json_result = json.loads(result)["text"]
+                #print(json_result)
+                speech += json_result.strip()
+
+    result = recognizer.FinalResult()
+    json_result = json.loads(result)["text"]
+    #print(json_result)
+    speech += json_result.strip()
+    return speech
 
     

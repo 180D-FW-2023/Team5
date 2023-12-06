@@ -15,6 +15,8 @@ import time
 import threading
 import shutil
 
+#os.environ["FFMPEG_BINARY"] = r"C:\ffmpeg-2023-12-04-git-8c117b75af-full_build\ffmpeg-2023-12-04-git-8c117b75af-full_build\bin\ffmpeg.exe"
+
 import ffmpeg
 from gtts import gTTS
 from pydub import AudioSegment

@@ -135,7 +135,7 @@ class GameServer:
 
 def main():
     game_server = GameServer()
-    game_server.start_server()
+    #game_server.start_server()
     story_setting = game_server.initiate_game()
     game_server.main_loop_non_stream(story_setting)
 
