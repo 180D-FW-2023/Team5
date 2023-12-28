@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(r"../src")
 
-import rbp_drivers.wm8960_helpers as rbp
+import wm8960_helpers as rbp
 import speech_processing as sp
 import text_to_bear_audio as tba
 from helper import timeit
@@ -13,7 +13,7 @@ def edge_testing():
     text = timeit(sp.recognize_wav)(temp_wav_file)
 
     os.remove(temp_wav_file)
-    
+
     out_audio_path = timeit(tba.convert_text_to_bear_audio)(text, 1)
     print(out_audio_path)
     timeit(rbp.play_audio)(out_audio_path)

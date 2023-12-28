@@ -10,7 +10,8 @@ from helper import timeit
 
 RECEIVED_FILE_PATH = "temp.wav"
 
-fts = tcp.FileTransferServer("192.168.99.31", 12345)
+# uses defaults in environment
+fts = tcp.FileTransferServer()
 fts.start_server()
 
 fts.receive_file(RECEIVED_FILE_PATH)

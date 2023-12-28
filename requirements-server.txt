@@ -3,5 +3,7 @@ SpeechRecognition
 numpy
 pygame
 pydub
-pyalsaaudio
 ffmpeg-python
+python-dotenv
+openai
+pyaudio
