@@ -22,6 +22,60 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         self.server_port = int(server_port)
         self.tcp_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+    def send_signal(self, signal : int):
+        # sends an int signal for quick communication across client/server
+        try:
+            self.tcp_client_socket.sendall(signal)
+            print(f"Signal {signal} sent successfully.")
+        except Exception as e:
+            print(f"Error sending signal: {e}")
+    
+    def receive_signal(self):
+        # receives an int signal for quick communication across client/server
+        try:
+            signal_data = self.tcp_client_socket.recv(4)
+            signal = struct.unpack("!I", signal_data)[0]
+        except Exception as e:
+            print(f"Error receiving signal: {e}")
+            return None
+        
+        return signal
+    
+    def send_data(self, data : str):
+        try:
+            # Send the file size
+            data_size = len(data)
+            size_data = struct.pack("!I", data_size)
+            self.tcp_client_socket.sendall(size_data)
+
+            self.tcp_client_socket.sendall(data)
+
+            print(f"Data {data[:20]}... sent successfully.")
+        except Exception as e:
+            print(f"Error sending data: {e}")
+
+    def receive_file(self):
+        received_data = ""
+        try:
+            # Receive the file size
+            size_data = self.tcp_client_socket.recv(4)
+            data_size = struct.unpack("!I", size_data)[0]
+
+            received_size = 0
+            while received_size < data_size:
+                data = self.tcp_client_socket.recv(1024)
+                if not data:
+                    break
+                received_data += data
+                received_size += len(data)
+
+            print(f"Data received including {received_data[:20]}...")
+        except Exception as e:
+            print(f"Error receiving data: {e}")
+            return None
+
+        return data
+    
     def send_file(self, file_path):
         file_path = str(file_path) # for pathlib
         try:
@@ -37,8 +91,6 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             print(f"File {file_path} sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
-
-        return file_path
 
     def receive_file(self, save_path):
         save_path = str(save_path) # for pathlib
@@ -70,7 +122,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
     def __del__(self):
         self.close_connection()
 
-class FileTransferClient(TCPBase):
+class TCPClient(TCPBase):
     def __init__(self, server_ip=None, server_port=None, timeout=None):
         super().__init__(server_ip, server_port, timeout)
 
@@ -86,7 +138,7 @@ class FileTransferClient(TCPBase):
         self.tcp_client_socket.close()
         print("Connection closed.")
 
-class FileTransferServer(TCPBase):
+class TCPServer(TCPBase):
     def __init__(self, server_ip=None, server_port=None, timeout=None):
         super().__init__(server_ip, server_port, timeout)
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

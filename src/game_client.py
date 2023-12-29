@@ -29,14 +29,14 @@ class GameClient:
         self.record_time = record_time
 
         #  client setup
-        self.ftc = tcp.FileTransferClient(server_ip, server_port) # connects to server in init
-        self.ftc.connect_to_server()
+        self.tcpc = tcp.TCPClient(server_ip, server_port) # connects to server in init
+        self.tcpc.connect_to_server()
 
     def main_loop_non_stream(self):
         while True:
             received_file_path = self.temp_dir / "received.wav"
 
-            received_file_path = self.ftc.receive_file(received_file_path)
+            received_file_path = self.tcpc.receive_file(received_file_path)
             if received_file_path is None: # handles bad inputs
                 break
 
@@ -45,7 +45,7 @@ class GameClient:
             record_file_path = self.temp_dir / "recorded.wav"
 
             record_file_path = am.record_audio_by_time(record_file_path)
-            self.ftc.send_file(record_file_path)
+            self.tcpc.send_file(record_file_path)
 
             os.remove(received_file_path)
             os.remove(record_file_path)

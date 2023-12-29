@@ -38,14 +38,14 @@ class GameServer:
         self.prompts = h.read_prompts_json(prompts_json_path)
 
         # # file transfer setup
-        self.fts = tcp.FileTransferServer(server_ip, server_port)
+        self.tcps = tcp.TCPServer(server_ip, server_port)
 
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
         self.use_local = True # flag if server isnt started to run a local version for debugging/testing
 
     def start_server(self):
-        self.fts.start_server() # blocks until a client connects
+        self.tcps.start_server() # blocks until a client connects
         self.use_local = False
 
     def initiate_game(self):
@@ -106,7 +106,7 @@ class GameServer:
         temp_wav_path = self.temp_dir / f"temp_{int(time.time())}.wav"
         temp_wav_path = tba.convert_text_to_bear_audio_opt(audio_text, temp_wav_path, self.temp_dir)
         if not self.use_local:
-            self.fts.send_file(temp_wav_path)
+            self.tcps.send_file(temp_wav_path)
         else:
             am.play_audio(temp_wav_path)
             print(f"ChatGPT says: {audio_text}")
@@ -116,7 +116,7 @@ class GameServer:
         if not self.use_local:
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
-            client_wav_path = self.fts.receive_file(client_wav_path)
+            client_wav_path = self.tcps.receive_file(client_wav_path)
             client_res = timeit(sp.recognize_wav)(client_wav_path)
 
             print(f"You say: {client_res}")
