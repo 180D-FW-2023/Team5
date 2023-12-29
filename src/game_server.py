@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 from dotenv import load_dotenv
 import os
+import time
 
 from llm_handler import LLM
 import speech_processing as sp
@@ -29,7 +30,8 @@ class GameServer:
                  prompts_json_path=PROMPTS_JSON_PATH,
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
-                 remove_temp=True):
+                 remove_temp=True,
+                 stream_llm=True):
         # general file init``
         self.temp_dir = h.init_temp_storage(temp_dir_path)
         self.remove_temp = remove_temp
@@ -38,7 +40,7 @@ class GameServer:
         # # file transfer setup
         self.fts = tcp.FileTransferServer(server_ip, server_port)
 
-        self.llm = LLM(os.getenv("KEY"))
+        self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
         self.use_local = True # flag if server isnt started to run a local version for debugging/testing
 
@@ -48,31 +50,60 @@ class GameServer:
 
     def initiate_game(self):
         # getting the players name
-        user_name = self.prompt_and_response_non_stream("system", self.prompts["init"])
+        user_name = self.prompt_and_response("system", self.prompts["init"])
 
         # prompting user for the story setting
-        story_setting = self.prompt_and_response_non_stream("user", user_name)
+        story_setting = self.prompt_and_response("user", user_name)
 
         return story_setting
 
-    def prompt_and_response_non_stream(self, role="user", prompt=None):
-        llm_res = self.prompt_llm_non_stream(role, prompt)
-        self.send_client_tts(llm_res)
+    def prompt_llm(self, role="user", prompt=None):
+        if prompt is None: # no prompt ie prob didnt get a response
+            res = "Sorry I didn't catch that. Could you say that again?"
+        else:
+            res = self.llm.prompt_llm(role=role, prompt=prompt) # initialization prompt
+
+        return res
+    
+    def send_llm_response_tts(self):
+        # sends the actual message since its in a queue thats buffering over time
+        chunks = []
+        role = None
+
+        first_message = True
+        start = time.time()
+        while True:
+            ret = self.llm.response_queue.get()
+            if first_message:
+                end = time.time()
+                print(f"Delay to begin processing llm response: {end-start}")
+                first_message = False
+                
+            if ret is None: # message is over
+                break
+            role, chunk = ret
+            if chunk == "":
+                continue
+            chunks.append(chunk)
+            self.send_client_tts(chunk)
+        
+        # add to the chat history
+        msg = "".join(chunks)
+        self.llm.add_chat_history(role, msg) # update the llm chat history
+
+        return msg
+
+    def prompt_and_response(self, role="user", prompt=None):
+        self.prompt_llm(role, prompt)
+        llm_res = self.send_llm_response_tts()
+
         client_res = self.get_client_response_non_stream()
 
         return client_res
 
-    def prompt_llm_non_stream(self, role="user", prompt=None):
-        if prompt is None: # no prompt ie prob didnt get a response
-            res = "Sorry I didn't catch that. Could you say that again?"
-        else:
-            res = timeit(self.llm.prompt_llm_non_stream)(role=role, prompt=prompt) # initialization prompt
-
-        return res
-
     def send_client_tts(self, audio_text):
         # play some audio to client
-        temp_wav_path = self.temp_dir / "temp.wav"
+        temp_wav_path = self.temp_dir / f"temp_{int(time.time())}.wav"
         temp_wav_path = tba.convert_text_to_bear_audio_opt(audio_text, temp_wav_path, self.temp_dir)
         if not self.use_local:
             self.fts.send_file(temp_wav_path)
@@ -93,7 +124,7 @@ class GameServer:
             client_res = input("You respond: ")
 
         return client_res
-
+    
     def main_loop_non_stream(self, initial_prompt):
         prompt = initial_prompt
 
@@ -101,9 +132,9 @@ class GameServer:
         random_round_next_round = False
         random_round = False
         while True:
-            llm_response = self.prompt_llm_non_stream(prompt=prompt)
-            self.send_client_tts(llm_response)
-            if "for playing" in llm_response:
+            self.prompt_llm(prompt=prompt)
+            llm_res = self.send_llm_response_tts()
+            if "for playing" in llm_res:
                 print("Game is over!")
                 # send termination signal here
                 break
@@ -135,7 +166,7 @@ class GameServer:
 
 def main():
     game_server = GameServer()
-    game_server.start_server()
+    # game_server.start_server()
     story_setting = game_server.initiate_game()
     game_server.main_loop_non_stream(story_setting)
 

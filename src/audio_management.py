@@ -61,14 +61,15 @@ def play_audio(path):
         return False # failed to play
 
     audio = pyaudio.PyAudio()
-    stream = audio.open(format =
-                audio.get_format_from_width(f.getsampwidth()),
+    stream = audio.open(
+                format = audio.get_format_from_width(f.getsampwidth()),
                 channels = f.getnchannels(),
                 rate = f.getframerate(),
-                output = True)
+                output = True
+                )
 
     data = f.readframes(CHUNK)
-
+    print(len(data))
     # play stream (looping from beginning of file to the end)
     while data:
         # writing to the stream is what *actually* plays the sound.
