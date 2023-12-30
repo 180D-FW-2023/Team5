@@ -54,7 +54,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         except Exception as e:
             print(f"Error sending data: {e}")
 
-    def receive_file(self):
+    def receive_data(self):
         received_data = ""
         try:
             # Receive the file size
@@ -114,6 +114,12 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             return None
 
         return save_path
+    
+    def send_file_stream(self, input_queue):
+        pass
+
+    def receive_file_stream(self, output_queue):
+        pass
 
     @abstractmethod
     def close_connection(self):
