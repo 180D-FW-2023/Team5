@@ -164,6 +164,7 @@ def llm_producer(input_queue, output_queue, client, stream=True, n_tokens=2):
     # intended for separate thread
     # n tokens is number of separated tokens to push with each chunk
     while True:
+        # block indefinitely since its in a while loop
         chat_history = input_queue.get()
         if chat_history is None:
             print("LLM PRODUCER THREAD CLOSED. ")
