@@ -23,7 +23,7 @@ class GameClient:
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
                  record_time=RECORD_TIME,
-                 remove_temp=False):
+                 remove_temp=True):
         self.temp_dir = h.init_temp_storage(temp_dir_path)
 
         self.remove_temp = remove_temp
