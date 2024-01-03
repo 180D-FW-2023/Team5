@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 from dotenv import load_dotenv
 
+from signals import Signals
 # TODO: ADD TIMEOUTS
 
 
@@ -22,15 +23,17 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         self.server_port = int(server_port)
         self.tcp_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def send_signal(self, signal : int):
+    def send_signal(self, signal_data : int):
         # sends an int signal for quick communication across client/server
+        signal_data = int(signal_data)
+        signal = struct.pack("!I", signal_data)
         try:
             self.tcp_client_socket.sendall(signal)
-            print(f"Signal {signal} sent successfully.")
+            print(f"Signal {signal_data} sent successfully.")
         except Exception as e:
             print(f"Error sending signal: {e}")
     
-    def receive_signal(self):
+    def receive_signal(self, expected_signals=[]):
         # receives an int signal for quick communication across client/server
         try:
             signal_data = self.tcp_client_socket.recv(4)
@@ -39,9 +42,14 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             print(f"Error receiving signal: {e}")
             return None
         
+        if expected_signals != []:
+            if signal not in expected_signals: # error checking
+                raise Exception(f"Unaligned signals: Expected signals: {expected_signals} but received {signal}")
         return signal
     
     def send_data(self, data : str):
+
+        self.send_signal(Signals.DATA_SENT)
         try:
             # Send the file size
             data_size = len(data)
@@ -56,6 +64,8 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
 
     def receive_data(self):
         received_data = ""
+
+        self.receive_signal(Signals.DATA_SENT)
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
@@ -78,6 +88,8 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
     
     def send_file(self, file_path):
         file_path = str(file_path) # for pathlib
+
+        self.send_signal(Signals.FILE_SENT)
         try:
             # Send the file size
             file_size = os.path.getsize(file_path)
@@ -94,6 +106,8 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
 
     def receive_file(self, save_path):
         save_path = str(save_path) # for pathlib
+            
+        self.receive_signal(expected_signals=[Signals.FILE_SENT])
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
@@ -116,10 +130,33 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         return save_path
     
     def send_file_stream(self, input_queue):
+        # assume the input queue is a queue of file paths
+
+        self.send_signal(Signals.INIT_FT_STREAMED)
+        while True:
+            file_path = input_queue.get(timeout=10)
+            if file_path is None:
+                break
+            
+            self.send_signal(Signals.IN_PROGRESS_FT_STREAMED)
+            self.send_file(file_path)
+
+        self.send_signal(Signals.END_FT_STREAMED)
+
         pass
 
-    def receive_file_stream(self, output_queue):
-        pass
+    def receive_file_stream(self, output_queue, save_dir, ext, file_name_tag=""):
+        save_dir.mkdir(exist_ok=True) # makes sure the save dir exists
+        self.receive_signal(expected_signal=Signals.INIT_FT_STREAMED)
+        i = 0
+        while True:
+            signal = self.receive_signal(expected_signals=[Signals.IN_PROGRESS_FT_STREAMED, Signals.END_FT_STREAMED])
+            if signal == Signals.END_FT_STREAMED:
+                break
+            received_file_path = self.receive_file(save_dir / f"{file_name_tag}_{i}{ext}")
+            output_queue.put(received_file_path, timeout=10)
+            i += 1
+
 
     @abstractmethod
     def close_connection(self):

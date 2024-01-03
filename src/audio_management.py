@@ -83,6 +83,9 @@ def play_audio(path):
     audio.terminate()
     return True
 
+# TODO: Consider changing this to be separately threaded. Means the mic needs to be properly handled
+# incase of current playback
+
 def play_audio_stream(input_queue):
     # takes in a queue of file paths and continuously plays
     # None is expected as the sentinel otherwise itll just keep playing cause fuck it we ball

@@ -30,8 +30,8 @@ class GameServer:
                  prompts_json_path=PROMPTS_JSON_PATH,
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
-                 remove_temp=True,
-                 stream_llm=True):
+                 remove_temp=False,
+                 stream_llm=False):
         # general file init``
         self.temp_dir = h.init_temp_storage(temp_dir_path)
         self.remove_temp = remove_temp
@@ -51,29 +51,23 @@ class GameServer:
     def initiate_game(self):
         # getting the players name
         user_name = self.prompt_and_response("system", self.prompts["init"])
-
         # prompting user for the story setting
+
         story_setting = self.prompt_and_response("user", user_name)
 
         return story_setting
 
-    def prompt_llm(self, role="user", prompt=None):
-        if prompt is None: # no prompt ie prob didnt get a response
-            res = "Sorry I didn't catch that. Could you say that again?"
-        else:
-            res = self.llm.prompt_llm(role=role, prompt=prompt) # initialization prompt
-
-        return res
-    
     def send_llm_response_tts(self):
         # sends the actual message since its in a queue thats buffering over time
         chunks = []
         role = None
 
+        # TODO: SEND A SiGNAL TO INDICATE a STREAMED INPUT
+
         first_message = True
         start = time.time()
         while True:
-            ret = self.llm.response_queue.get()
+            ret = self.llm.response_queue.get(timeout=10)
             if first_message:
                 end = time.time()
                 print(f"Delay to begin processing llm response: {end-start}")
@@ -93,11 +87,18 @@ class GameServer:
 
         return msg
 
-    def prompt_and_response(self, role="user", prompt=None):
-        self.prompt_llm(role, prompt)
+    def prompt_and_response(self, role="user", prompt=None, force_response=True):
+        # force response continues rerunning until you recognize a response
+        
+        prompt_successful = self.llm.prompt_llm(role, prompt)
         llm_res = self.send_llm_response_tts()
 
         client_res = self.get_client_response_non_stream()
+
+        # locks and continuously asks for a new response
+        while client_res is None and force_response:
+            self.send_client_tts("Sorry, I didn't catch that could you say that again?")
+            client_res = self.get_client_response_non_stream()
 
         return client_res
 
@@ -119,7 +120,7 @@ class GameServer:
             client_wav_path = self.tcps.receive_file(client_wav_path)
             client_res = timeit(sp.recognize_wav)(client_wav_path)
 
-            print(f"You say: {client_res}")
+            print(f"You said: {client_res}")
         else: # local mode that just takes a user input
             client_res = input("You respond: ")
 
@@ -166,7 +167,7 @@ class GameServer:
 
 def main():
     game_server = GameServer()
-    # game_server.start_server()
+    game_server.start_server()
     story_setting = game_server.initiate_game()
     game_server.main_loop_non_stream(story_setting)
 

@@ -29,7 +29,7 @@ class LLM:
         self.chat_history = [] # ordered by statements
 
         # used to communicate across threads. Single thread as we expect a single producer/consumer at all times.
-        self.prompt_queue = queue.Queue(maxsize=2) # a queue to send prompts for processing to the llm thread. None signals the end of the process
+        self.prompt_queue = queue.Queue(maxsize=3) # a queue to send prompts for processing to the llm thread. None signals the end of the process
 
         # expected to clear every new prompt so we dont need to indicate the start
         self.response_queue = queue.Queue(maxsize=20) # a queue of all the sentences received from llm. None means the previous message is done. 
@@ -88,15 +88,16 @@ class LLM:
         """
         if prompt is None:
             print("NO PROMPT GIVEN")
-            return None
+            return False
 
         if prompt != "":
             # repeat the existing chat history
             self.add_chat_history(role, prompt)
         else:
             print("EMPTY PROMPT GIVEN. RERUNNING THE PREVIOUS CHAT HISTORY")
-
         self.prompt_queue.put(self.chat_history)
+
+        return True
 
 
     def prompt_llm_non_stream(self, role="user", prompt=""):
