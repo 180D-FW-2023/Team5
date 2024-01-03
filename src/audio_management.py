@@ -1,6 +1,7 @@
 import time
 import wave
 import pyaudio
+import queue
 
 from constants import *
 
@@ -10,7 +11,7 @@ def open_audio_file(path):
     path = str(path)
     try:
         f = wave.open(path, "rb")
-        print(f'Output File: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
+        print(f'{path} Opened: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
     except wave.Error as e:
         print(e)
         return None
@@ -61,14 +62,14 @@ def play_audio(path):
         return False # failed to play
 
     audio = pyaudio.PyAudio()
-    stream = audio.open(format =
-                audio.get_format_from_width(f.getsampwidth()),
+    stream = audio.open(
+                format = audio.get_format_from_width(f.getsampwidth()),
                 channels = f.getnchannels(),
                 rate = f.getframerate(),
-                output = True)
+                output = True
+                )
 
     data = f.readframes(CHUNK)
-
     # play stream (looping from beginning of file to the end)
     while data:
         # writing to the stream is what *actually* plays the sound.
@@ -82,7 +83,69 @@ def play_audio(path):
     audio.terminate()
     return True
 
+# TODO: Consider changing this to be separately threaded. Means the mic needs to be properly handled
+# incase of current playback
+
+def play_audio_stream(input_queue):
+    # takes in a queue of file paths and continuously plays
+    # None is expected as the sentinel otherwise itll just keep playing cause fuck it we ball
+
+    initial_path = input_queue.get(timeout=10) #want this one to be blocking just so it will have something
+    f = open_audio_file(initial_path)
+    if f is None:
+        return False # failed to play
+    
+    # init a stream from the first input segment
+    audio = pyaudio.PyAudio()
+    stream = audio.open(
+                format = audio.get_format_from_width(f.getsampwidth()),
+                channels = f.getnchannels(),
+                rate = f.getframerate(),
+                output = True
+                )
+    
+    # play the initial segment
+    data = f.readframes(CHUNK)
+    # play stream (looping from beginning of file to the end)
+    while data:
+        # writing to the stream is what *actually* plays the sound.
+        stream.write(data)
+        data = f.readframes(CHUNK)
+    f.close()
+
+    # continuously play the rest of the input queue
+    # adding a timeout just in case
+    start_time = time.time()
+    while True:
+        path = input_queue.get(timeout=10)
+        if path is None: # sentinel
+            break
+
+        f = open_audio_file(path)
+
+        data = f.readframes(CHUNK)
+        while data:
+            stream.write(data)
+            data = f.readframes(CHUNK)
+        f.close() # close to prevent dangling fd
+
+    # clean up
+    stream.close()
+    audio.terminate()
+    return True
+
 
 if __name__ == "__main__":
-    record_audio_by_time("out.wav")
-    play_audio("out.wav")
+    # record_audio_by_time("out.wav")
+    # play_audio("out.wav")
+
+    # testing streaming audio
+    test_queue = queue.Queue()
+    test_path = r"C:\code\ece180da\final_project\test_data\test_capstone.wav"
+    test_queue.put(test_path)
+    test_queue.put(test_path)
+    test_queue.put(test_path)
+    test_queue.put(test_path)
+    test_queue.put(None)
+
+    play_audio_stream(test_queue)
