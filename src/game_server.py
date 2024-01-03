@@ -95,12 +95,12 @@ class GameServer:
         prompt_successful = self.llm.prompt_llm(role, prompt)
         llm_res = self.send_llm_response_tts()
 
-        client_res = self.get_client_response_non_stream()
+        client_res = self.get_client_response()
 
         # locks and continuously asks for a new response
         while client_res is None and force_response:
             self.send_client_tts("Sorry, I didn't catch that could you say that again?")
-            client_res = self.get_client_response_non_stream()
+            client_res = self.get_client_response()
 
         return client_res
 
@@ -122,7 +122,7 @@ class GameServer:
             am.play_audio(temp_wav_path)
             print(f"ChatGPT says: {audio_text}")
 
-    def get_client_response_non_stream(self):
+    def get_client_response(self):
         # get a client wav message and process
         if not self.use_local:
             # client should get stuff here
@@ -151,7 +151,7 @@ class GameServer:
                 # send termination signal here
                 break
 
-            prompt = self.get_client_response_non_stream()
+            prompt = self.get_client_response()
 
         if random_round_next_round:
             random_round = True
