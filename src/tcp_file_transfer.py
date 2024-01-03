@@ -29,7 +29,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         signal = struct.pack("!I", signal_data)
         try:
             self.tcp_client_socket.sendall(signal)
-            print(f"Signal {signal_data} sent successfully.")
+            print(f"Signal {Signals(signal_data).name} sent successfully.")
         except Exception as e:
             print(f"Error sending signal: {e}")
     
@@ -38,6 +38,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         try:
             signal_data = self.tcp_client_socket.recv(4)
             signal = struct.unpack("!I", signal_data)[0]
+            print(f"Signal {Signals(signal).name} received.")
         except Exception as e:
             print(f"Error receiving signal: {e}")
             return None
@@ -62,10 +63,8 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         except Exception as e:
             print(f"Error sending data: {e}")
 
-    def receive_data(self):
+    def receive_data(self, check_signal=True):
         received_data = ""
-
-        self.receive_signal(Signals.DATA_SENT)
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
@@ -88,7 +87,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
     
     def send_file(self, file_path):
         file_path = str(file_path) # for pathlib
-
+        
         self.send_signal(Signals.FILE_SENT)
         try:
             # Send the file size
@@ -107,7 +106,6 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
     def receive_file(self, save_path):
         save_path = str(save_path) # for pathlib
             
-        self.receive_signal(expected_signals=[Signals.FILE_SENT])
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
@@ -116,7 +114,9 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             received_size = 0
             with open(save_path, 'wb') as file:
                 while received_size < file_size:
-                    data = self.tcp_client_socket.recv(1024)
+
+                    packet_size = file_size - received_size if file_size - received_size < 1024 else 1024
+                    data = self.tcp_client_socket.recv(packet_size)
                     if not data:
                         break
                     file.write(data)
@@ -138,7 +138,6 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             if file_path is None:
                 break
             
-            self.send_signal(Signals.IN_PROGRESS_FT_STREAMED)
             self.send_file(file_path)
 
         self.send_signal(Signals.END_FT_STREAMED)
@@ -146,12 +145,13 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         pass
 
     def receive_file_stream(self, output_queue, save_dir, ext, file_name_tag=""):
+        # sentinel is none
         save_dir.mkdir(exist_ok=True) # makes sure the save dir exists
-        self.receive_signal(expected_signal=Signals.INIT_FT_STREAMED)
         i = 0
         while True:
-            signal = self.receive_signal(expected_signals=[Signals.IN_PROGRESS_FT_STREAMED, Signals.END_FT_STREAMED])
+            signal = self.receive_signal(expected_signals=[Signals.FILE_SENT, Signals.END_FT_STREAMED])
             if signal == Signals.END_FT_STREAMED:
+                output_queue.put(None, timeout=10) # sentinel
                 break
             received_file_path = self.receive_file(save_dir / f"{file_name_tag}_{i}{ext}")
             output_queue.put(received_file_path, timeout=10)

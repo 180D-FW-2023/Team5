@@ -117,18 +117,11 @@ def play_audio_stream(input_queue):
     # adding a timeout just in case
     start_time = time.time()
     while True:
-        try:
-            path = input_queue.get(block=False)
-            start_time = time.time()
-        except queue.Empty: # if its empty just keep going until something fills
-            if time.time() - start_time > 10: # adding a quick timeout if it really cant find any file
-                return False
-            continue
-        
-        if path is None: # snetinel
+        path = input_queue.get(timeout=10)
+        if path is None: # sentinel
             break
 
-        f = open_audio_file(initial_path)
+        f = open_audio_file(path)
 
         data = f.readframes(CHUNK)
         while data:

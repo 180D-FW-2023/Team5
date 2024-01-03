@@ -10,7 +10,7 @@ import speech_processing as sp
 import text_to_bear_audio as tba
 import tcp_file_transfer as tcp
 import audio_management as am
-
+from signals import Signals
 import helper as h
 from helper import timeit
 from constants import *
@@ -31,7 +31,7 @@ class GameServer:
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
                  remove_temp=False,
-                 stream_llm=False):
+                 stream_llm=True):
         # general file init``
         self.temp_dir = h.init_temp_storage(temp_dir_path)
         self.remove_temp = remove_temp
@@ -63,7 +63,7 @@ class GameServer:
         role = None
 
         # TODO: SEND A SiGNAL TO INDICATE a STREAMED INPUT
-
+        self.tcps.send_signal(Signals.INIT_FT_STREAMED)
         first_message = True
         start = time.time()
         while True:
@@ -81,6 +81,8 @@ class GameServer:
             chunks.append(chunk)
             self.send_client_tts(chunk)
         
+        self.tcps.send_signal(Signals.END_FT_STREAMED) # signals the end of a file stream
+
         # add to the chat history
         msg = "".join(chunks)
         self.llm.add_chat_history(role, msg) # update the llm chat history
@@ -89,7 +91,7 @@ class GameServer:
 
     def prompt_and_response(self, role="user", prompt=None, force_response=True):
         # force response continues rerunning until you recognize a response
-        
+
         prompt_successful = self.llm.prompt_llm(role, prompt)
         llm_res = self.send_llm_response_tts()
 
@@ -102,10 +104,18 @@ class GameServer:
 
         return client_res
 
-    def send_client_tts(self, audio_text):
+    def make_tts(self, audio_text):
         # play some audio to client
         temp_wav_path = self.temp_dir / f"temp_{int(time.time())}.wav"
         temp_wav_path = tba.convert_text_to_bear_audio_opt(audio_text, temp_wav_path, self.temp_dir)
+
+        return temp_wav_path
+
+    def send_client_tts(self, audio_text):
+        if audio_text == "":
+            return
+        
+        temp_wav_path = self.make_tts(audio_text)
         if not self.use_local:
             self.tcps.send_file(temp_wav_path)
         else:
@@ -117,6 +127,7 @@ class GameServer:
         if not self.use_local:
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
+            self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT])
             client_wav_path = self.tcps.receive_file(client_wav_path)
             client_res = timeit(sp.recognize_wav)(client_wav_path)
 
@@ -126,14 +137,14 @@ class GameServer:
 
         return client_res
     
-    def main_loop_non_stream(self, initial_prompt):
+    def main_loop(self, initial_prompt):
         prompt = initial_prompt
 
         # Variables for the game logic
         random_round_next_round = False
         random_round = False
         while True:
-            self.prompt_llm(prompt=prompt)
+            self.llm.prompt_llm(prompt=prompt)
             llm_res = self.send_llm_response_tts()
             if "for playing" in llm_res:
                 print("Game is over!")
@@ -169,7 +180,7 @@ def main():
     game_server = GameServer()
     game_server.start_server()
     story_setting = game_server.initiate_game()
-    game_server.main_loop_non_stream(story_setting)
+    game_server.main_loop(story_setting)
 
 if __name__ == '__main__':
     main()
