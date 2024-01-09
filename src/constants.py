@@ -7,6 +7,9 @@ DOTENV_PATH = ".env" # check in src
 
 RECORD_TIME = 10 # seconds to record childs response
 
+# llm params
+PROMPT_DELIMITERS =  ["?", "!", ".", ";"]
+
 # recording settings
 CHANNELS = 2 # Adjust to your number of channels
 RATE = 44100 # Sample Rate
