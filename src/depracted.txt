@@ -1,4 +1,41 @@
-import speech_processing as sp
+def prompt_llm_non_stream(self, role="user", prompt=""):
+
+        """
+        Send a new message to GPT 3.5 Turbo LLM including the context of the game so far. Returns a full
+        string when the entire response is complete
+
+        Parameters:
+        - prompt (str): The next prompt to give. If not given, repeat the chat history
+        - role (str): specific person giving this message. Most likely always on default
+
+        Returns:
+        - full (str): The response from GPT 3.5 Turbo.
+        """
+        if prompt is None:
+            print("NO PROMPT GIVEN")
+            return None
+
+        if prompt != "":
+            # repeat the existing chat history
+            self.add_chat_history(role, prompt)
+        else:
+            print("EMPTY PROMPT GIVEN. RERUNNING THE PREVIOUS CHAT HISTORY")
+        # Create an OpenAI API request for GPT 3.5 Turbo
+        res = self.client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            stream=False,
+            messages=self.chat_history
+        )
+        res_role = res.choices[0].message.role
+        res_msg = res.choices[0].message.content
+
+        # adding the response to the chat history
+        self.add_chat_history(res_role, res_msg)
+
+        return res_msg
+
+
+import speech_to_text as sp
 import text_to_bear_audio as tba
 import stream_test as st
 import llm_handler as llm_h
