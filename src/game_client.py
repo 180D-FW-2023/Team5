@@ -4,11 +4,12 @@ from pathlib import Path
 import queue
 from dotenv import load_dotenv
 import threading 
+import time
 
 from signals import Signals
 import helper as h
 import tcp_file_transfer as tcp
-import audio_management as am
+import play_and_record_audio as am
 from constants import *
 
 # change to parent directory to standard directories
@@ -63,6 +64,7 @@ class GameClient:
 
 
             record_file_path = self.temp_dir / "recorded.wav"
+            time.sleep(AUDIO_SWITCH_DELAY)
             record_file_path = am.record_audio_by_time(record_file_path)
             self.tcpc.send_file(record_file_path)
 

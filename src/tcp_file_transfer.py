@@ -48,6 +48,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
                 raise Exception(f"Unaligned signals: Expected signals: {expected_signals} but received {signal}")
         return signal
     
+    # send and receive data fns not currently used
     def send_data(self, data : str):
 
         self.send_signal(Signals.DATA_SENT)
@@ -129,6 +130,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
 
         return save_path
     
+    # not currently used, implemented separately in game_server
     def send_file_stream(self, input_queue):
         # assume the input queue is a queue of file paths
 
@@ -187,6 +189,7 @@ class TCPServer(TCPBase):
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def start_server(self):
+        print("start server funciton running")
         try:
             self.tcp_server_socket.bind((self.server_ip, self.server_port))
             self.tcp_server_socket.listen()

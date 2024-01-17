@@ -5,18 +5,7 @@ import threading
 from openai import OpenAI
 
 from constants import *
-import text_to_bear_audio as tba
-
-def has_chars(input_string, chars):
-    # returns true if the string has any of the given chars
-    return any(char in chars for char in input_string)
-
-def split_delimiters(input_string, delimiters):
-    # splits a string by multiple delimiters
-    for delimiter in delimiters:
-        input_string = input_string.replace(delimiter, f"{delimiter}**&**")
-
-    return input_string.split("**&**")
+import text_to_speech as tba
 
 class LLM:
     # class with state. Tracks the chat history as the person chats
@@ -44,7 +33,6 @@ class LLM:
                                                       self.stream), 
                                                 daemon=True)
         self.producer_thread.start()
-
 
     def __del__(self):
         self.producer_thread.join()
@@ -99,66 +87,16 @@ class LLM:
 
         return True
 
+def has_chars(input_string, chars):
+    # returns true if the string has any of the given chars
+    return any(char in chars for char in input_string)
 
-    def prompt_llm_non_stream(self, role="user", prompt=""):
-        """
-        Send a new message to GPT 3.5 Turbo LLM including the context of the game so far. Returns a full
-        string when the entire response is complete
+def split_delimiters(input_string, delimiters):
+    # splits a string by multiple delimiters
+    for delimiter in delimiters:
+        input_string = input_string.replace(delimiter, f"{delimiter}**&**")
 
-        Parameters:
-        - prompt (str): The next prompt to give. If not given, repeat the chat history
-        - role (str): specific person giving this message. Most likely always on default
-
-        Returns:
-        - full (str): The response from GPT 3.5 Turbo.
-        """
-        if prompt is None:
-            print("NO PROMPT GIVEN")
-            return None
-
-        if prompt != "":
-            # repeat the existing chat history
-            self.add_chat_history(role, prompt)
-        else:
-            print("EMPTY PROMPT GIVEN. RERUNNING THE PREVIOUS CHAT HISTORY")
-        # Create an OpenAI API request for GPT 3.5 Turbo
-        res = self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            stream=False,
-            messages=self.chat_history
-        )
-        res_role = res.choices[0].message.role
-        res_msg = res.choices[0].message.content
-
-        # adding the response to the chat history
-        self.add_chat_history(res_role, res_msg)
-
-        return res_msg
-
-    def has_ending_punctuation(self, input_string):
-        """
-        Check if the given input string contains any punctuation characters like a comma,
-        period, question mark, or exclamation point for which a pause would sound natural
-        after.s
-
-        Parameters:
-        - input_string (str): The string to be checked for punctuation.
-
-        Returns:
-        - bool: True if the input string contains at least one of the punctuation
-                characters, False otherwise.
-
-        Examples:
-        >>> has_punctuation("Hello, world!")
-        True
-
-        >>> has_punctuation("There's no ending punctuation here")
-        False
-        """
-        return ((',' in input_string) or
-                ('.' in input_string) or
-                ('?' in input_string) or
-                ('!' in input_string))
+    return input_string.split("**&**")
 
 def llm_producer(input_queue, output_queue, client, stream=True, n_tokens=2):
     print(f"LLM STREAM STATUS: {stream}")
@@ -220,6 +158,8 @@ def llm_producer(input_queue, output_queue, client, stream=True, n_tokens=2):
         # sends a signal to indicate the end of a prompt response
         output_queue.put(None)
 
+
+# used for testing
 if __name__ == "__main__":
     import os
     from dotenv import load_dotenv
