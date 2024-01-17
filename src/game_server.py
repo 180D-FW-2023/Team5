@@ -133,6 +133,7 @@ class GameServer:
             print(f"ChatGPT says: {audio_text}")
 
     def get_client_response(self):
+        print("Waiting for client response")
         # get a client wav message and process
         if not self.use_local:
             # client should get stuff here
@@ -162,6 +163,7 @@ class GameServer:
                 break
 
             prompt = self.get_client_response()
+            print("Got client response")
 
         if random_round_next_round:
             random_round = True

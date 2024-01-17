@@ -58,8 +58,7 @@ class GameClient:
                 self.tcpc.receive_file_stream(output_queue, self.temp_dir / "playback", ".wav", file_name_tag="playback")
                 audio_playback_thread.join() # wait for playback to finish
                 # shutil.rmtree(self.temp_dir / "playback")
-            else:
-                # TODO: Handle other signals
+            elif signal != Signals.END_FT_STREAMED:
                 raise NotImplementedError(f"Signal {Signals(signal).name} is not implemented")
 
 
