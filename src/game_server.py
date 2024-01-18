@@ -52,7 +52,7 @@ class GameServer:
 
     def start_server(self):
         if not self.use_local:
-            self.start_server() # blocks until a client connects
+            self.tcps.start_server() # blocks until a client connects
 
 
     def init_game(self):
@@ -210,6 +210,8 @@ def main():
     local_debug = args.d
 
     game_server = GameServer(local_debug)
+
+    game_server.start_server()
 
     story_setting = game_server.init_game()
 
