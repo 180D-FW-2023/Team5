@@ -4,3 +4,4 @@
 Teddy bear with IOT-enabled speaker to play interactive choose your own adventure games
 using ChatGPT as a backend
 
+Use python game_server.py -d to enable local debugging
