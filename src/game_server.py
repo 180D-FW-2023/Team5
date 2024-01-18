@@ -46,11 +46,14 @@ class GameServer:
 
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
+        print("-----------------------------------------------")
+        print("\n\n\tGame Initialization Complete\n\n")
+        print("-----------------------------------------------")
 
     def start_server(self):
-        print("start server here")
-        print(self.use_local)
-        self.tcps.start_server() # blocks until a client connects
+        if not self.use_local:
+            self.start_server() # blocks until a client connects
+
 
     def init_game(self):
         # getting the players name
@@ -67,9 +70,11 @@ class GameServer:
         role = None
 
         # first signal indicated the start of a streamed message
-        # note: as of now, the only signal that matters on the client end is INIT_FT_STREAMED -Spencer
-        self.tcps.send_signal(Signals.INIT_FT_STREAMED)
+
+        if not self.use_local:
+            self.tcps.send_signal(Signals.INIT_FT_STREAMED)
         first_message = True
+        chunk_num = 0 # enumerate the chunks in each stream response
         start = time.time()
         while True:
             ret = self.llm.response_queue.get(timeout=10)
@@ -84,10 +89,15 @@ class GameServer:
             if chunk == "":
                 continue
             chunks.append(chunk)
-            self.convert_tts_and_send_client(chunk)
+            if not self.use_local:
+                self.convert_tts_and_send_client(chunk, chunk_num=0) # chunk num is only used for local debugging
+            else:
+                self.convert_tts_and_send_client(chunk, chunk_num=chunk_num)
+            chunk_num+=1
         
         # signals the end of a file stream
-        self.tcps.send_signal(Signals.END_FT_STREAMED)
+        if not self.use_local:
+            self.tcps.send_signal(Signals.END_FT_STREAMED)
 
         # add to the chat history
         msg = "".join(chunks)
@@ -99,10 +109,9 @@ class GameServer:
         # force response continues rerunning until you recognize a response
 
         prompt_successful = self.llm.prompt_llm(role, prompt)
-        if not self.use_local:
-            llm_res = self.convert_and_send_llm_response()
 
-        print("what's your name")
+        llm_res = self.convert_and_send_llm_response()
+
         client_res = self.get_client_response()
 
         # locks and continuously asks for a new response
@@ -119,18 +128,21 @@ class GameServer:
 
         return temp_wav_path
 
-    def convert_tts_and_send_client(self, audio_text):
+    def convert_tts_and_send_client(self, audio_text, chunk_num):
         if audio_text == "": # don't attempt to send if nothing to send
             return
-        
-        temp_wav_path = self.convert_tts(audio_text)
 
         # check if we are just doing local debugging (no client)
         if not self.use_local:
+            temp_wav_path = self.convert_tts(audio_text)
             self.tcps.send_file(temp_wav_path)
-        else:
+        else: #do not play audio if running local debugging
             #am.play_audio(temp_wav_path)
-            print(f"ChatGPT says: {audio_text}")
+            if chunk_num == 0: # first chunk in message
+                print("-----------------------------------------------")
+                print(f"ChatGPT says: \n[CHUNK 0]{audio_text}")
+            else:
+                print(f"[CHUNK {chunk_num}] {audio_text}")
 
     def get_client_response(self):
         # get a client wav message and process
@@ -143,7 +155,8 @@ class GameServer:
 
             print(f"You said: {client_res}")
         else: # local mode that just takes a user input
-            client_res = input("You respond: ")
+            client_res = input("--------> You respond: ")
+            print("-----------------------------------------------")
 
         return client_res
     
@@ -188,24 +201,18 @@ class GameServer:
 
 def main():
 
+    # -d option enables local debugging without a client
+    # use: python game_server.py -d
     parser = argparse.ArgumentParser(description='Game server program for the choose your own adventure game.')
     parser.add_argument('-d', action='store_true', help='Enable local debugging (i.e. do not use client)')
 
     args = parser.parse_args()
-
-    # Access the arguments
     local_debug = args.d
 
-    print(local_debug)
-
     game_server = GameServer(local_debug)
-    print("created game server")
-    print(game_server.use_local)
-    if not game_server.use_local:
-        game_server.start_server()
-    print("started game server")
+
     story_setting = game_server.init_game()
-    print("started game")
+
     game_server.main_loop(story_setting)
 
 if __name__ == '__main__':
