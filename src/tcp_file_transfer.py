@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 from dotenv import load_dotenv
 
+from signals import Signals
 # TODO: ADD TIMEOUTS
 
 
@@ -22,8 +23,73 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         self.server_port = int(server_port)
         self.tcp_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+    def send_signal(self, signal_data : int):
+        # sends an int signal for quick communication across client/server
+        signal_data = int(signal_data)
+        signal = struct.pack("!I", signal_data)
+        try:
+            self.tcp_client_socket.sendall(signal)
+            print(f"Signal {Signals(signal_data).name} sent successfully.")
+        except Exception as e:
+            print(f"Error sending signal: {e}")
+    
+    def receive_signal(self, expected_signals=[]):
+        # receives an int signal for quick communication across client/server
+        try:
+            signal_data = self.tcp_client_socket.recv(4)
+            signal = struct.unpack("!I", signal_data)[0]
+            print(f"Signal {Signals(signal).name} received.")
+        except Exception as e:
+            print(f"Error receiving signal: {e}")
+            return None
+        
+        if expected_signals != []:
+            if signal not in expected_signals: # error checking
+                raise Exception(f"Unaligned signals: Expected signals: {expected_signals} but received {signal}")
+        return signal
+    
+    # send and receive data fns not currently used
+    def send_data(self, data : str):
+
+        self.send_signal(Signals.DATA_SENT)
+        try:
+            # Send the file size
+            data_size = len(data)
+            size_data = struct.pack("!I", data_size)
+            self.tcp_client_socket.sendall(size_data)
+
+            self.tcp_client_socket.sendall(data)
+
+            print(f"Data {data[:20]}... sent successfully.")
+        except Exception as e:
+            print(f"Error sending data: {e}")
+
+    def receive_data(self):
+        received_data = ""
+        try:
+            # Receive the file size
+            size_data = self.tcp_client_socket.recv(4)
+            data_size = struct.unpack("!I", size_data)[0]
+
+            received_size = 0
+            while received_size < data_size:
+                data = self.tcp_client_socket.recv(1024)
+                if not data:
+                    break
+                received_data += data
+                received_size += len(data)
+
+            print(f"Data received including {received_data[:20]}...")
+        except Exception as e:
+            print(f"Error receiving data: {e}")
+            return None
+
+        return data
+    
     def send_file(self, file_path):
         file_path = str(file_path) # for pathlib
+        
+        self.send_signal(Signals.FILE_SENT)
         try:
             # Send the file size
             file_size = os.path.getsize(file_path)
@@ -38,10 +104,9 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         except Exception as e:
             print(f"Error sending file: {e}")
 
-        return file_path
-
     def receive_file(self, save_path):
         save_path = str(save_path) # for pathlib
+            
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
@@ -50,7 +115,9 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             received_size = 0
             with open(save_path, 'wb') as file:
                 while received_size < file_size:
-                    data = self.tcp_client_socket.recv(1024)
+
+                    packet_size = file_size - received_size if file_size - received_size < 1024 else 1024
+                    data = self.tcp_client_socket.recv(packet_size)
                     if not data:
                         break
                     file.write(data)
@@ -62,6 +129,36 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             return None
 
         return save_path
+    
+    # not currently used, implemented separately in game_server
+    def send_file_stream(self, input_queue):
+        # assume the input queue is a queue of file paths
+
+        self.send_signal(Signals.INIT_FT_STREAMED)
+        while True:
+            file_path = input_queue.get(timeout=10)
+            if file_path is None:
+                break
+            
+            self.send_file(file_path)
+
+        self.send_signal(Signals.END_FT_STREAMED)
+
+        pass
+
+    def receive_file_stream(self, output_queue, save_dir, ext, file_name_tag=""):
+        # sentinel is none
+        save_dir.mkdir(exist_ok=True) # makes sure the save dir exists
+        i = 0
+        while True:
+            signal = self.receive_signal(expected_signals=[Signals.FILE_SENT, Signals.END_FT_STREAMED])
+            if signal == Signals.END_FT_STREAMED:
+                output_queue.put(None, timeout=10) # sentinel
+                break
+            received_file_path = self.receive_file(save_dir / f"{file_name_tag}_{i}{ext}")
+            output_queue.put(received_file_path, timeout=10)
+            i += 1
+
 
     @abstractmethod
     def close_connection(self):
@@ -70,7 +167,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
     def __del__(self):
         self.close_connection()
 
-class FileTransferClient(TCPBase):
+class TCPClient(TCPBase):
     def __init__(self, server_ip=None, server_port=None, timeout=None):
         super().__init__(server_ip, server_port, timeout)
 
@@ -86,12 +183,13 @@ class FileTransferClient(TCPBase):
         self.tcp_client_socket.close()
         print("Connection closed.")
 
-class FileTransferServer(TCPBase):
+class TCPServer(TCPBase):
     def __init__(self, server_ip=None, server_port=None, timeout=None):
         super().__init__(server_ip, server_port, timeout)
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def start_server(self):
+        print("start server funciton running")
         try:
             self.tcp_server_socket.bind((self.server_ip, self.server_port))
             self.tcp_server_socket.listen()

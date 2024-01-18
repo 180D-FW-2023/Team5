@@ -1,12 +1,15 @@
 import os
 import shutil
 from pathlib import Path
-
+import queue
 from dotenv import load_dotenv
+import threading 
+import time
 
+from signals import Signals
 import helper as h
 import tcp_file_transfer as tcp
-import audio_management as am
+import play_and_record_audio as am
 from constants import *
 
 # change to parent directory to standard directories
@@ -29,25 +32,42 @@ class GameClient:
         self.record_time = record_time
 
         #  client setup
-        self.ftc = tcp.FileTransferClient(server_ip, server_port) # connects to server in init
-        self.ftc.connect_to_server()
+        self.tcpc = tcp.TCPClient(server_ip, server_port) # connects to server in init
+        self.tcpc.connect_to_server()
+        
 
-    def main_loop_non_stream(self):
+    def main_loop(self):
+        output_queue = queue.Queue(maxsize=10)
+
         while True:
-            received_file_path = self.temp_dir / "received.wav"
+            signal = self.tcpc.receive_signal()
+            if signal == Signals.FILE_SENT:
+                received_file_path = self.temp_dir / "received.wav"
 
-            received_file_path = self.ftc.receive_file(received_file_path)
-            if received_file_path is None: # handles bad inputs
-                break
+                received_file_path = self.tcpc.receive_file(received_file_path)
+                if received_file_path is None: # handles bad inputs
+                    break
+                am.play_audio(received_file_path)
+                os.remove(received_file_path)
+            elif signal == Signals.INIT_FT_STREAMED:
+                # separate thread for audio playback
+                audio_playback_thread = threading.Thread(target=am.play_audio_stream, 
+                                                    args=(output_queue,),
+                                                        daemon=True)
+                audio_playback_thread.start()
+                self.tcpc.receive_file_stream(output_queue, self.temp_dir / "playback", ".wav", file_name_tag="playback")
+                audio_playback_thread.join() # wait for playback to finish
+                # shutil.rmtree(self.temp_dir / "playback")
+            else:
+                # TODO: Handle other signals
+                raise NotImplementedError(f"Signal {Signals(signal).name} is not implemented")
 
-            am.play_audio(received_file_path)
 
             record_file_path = self.temp_dir / "recorded.wav"
-
+            time.sleep(AUDIO_SWITCH_DELAY)
             record_file_path = am.record_audio_by_time(record_file_path)
-            self.ftc.send_file(record_file_path)
+            self.tcpc.send_file(record_file_path)
 
-            os.remove(received_file_path)
             os.remove(record_file_path)
 
 
@@ -57,7 +77,7 @@ class GameClient:
 
 def main():
     game_client = GameClient()
-    game_client.main_loop_non_stream()
+    game_client.main_loop()
 
 
 if __name__ == '__main__':

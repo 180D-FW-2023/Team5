@@ -59,7 +59,6 @@ def split_into_two_pieces(input_string):
 
 # Creates a bear voice wav file and plays it
 def convert_text_to_bear_audio(input_text, output_path_num):
-
     int_dir = "./intermediate_files"
     out_dir = "./output"
 
