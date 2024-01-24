@@ -28,6 +28,7 @@ class GameServer:
                  use_local,
                  temp_dir_path=TEMP_DIR,
                  prompts_json_path=PROMPTS_JSON_PATH,
+                 filtered_words_json_path= FILTERED_WORDS_JSON_PATH,
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
                  remove_temp=True,
@@ -37,7 +38,7 @@ class GameServer:
         self.temp_dir = h.init_temp_storage(temp_dir_path)
         self.remove_temp = remove_temp
         self.prompts = h.read_prompts_json(prompts_json_path)
-
+        self.filtered_word_dicts = h.read_json(filtered_words_json_path) # dictionary of words to replace
         # file transfer setup
         self.tcps = tcp.TCPServer(server_ip, server_port)
 
