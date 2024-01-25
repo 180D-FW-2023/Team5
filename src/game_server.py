@@ -28,16 +28,17 @@ class GameServer:
                  use_local,
                  temp_dir_path=TEMP_DIR,
                  prompts_json_path=PROMPTS_JSON_PATH,
+                 filtered_words_json_path= FILTERED_WORDS_JSON_PATH,
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
                  remove_temp=True,
                  stream_llm=True):
-        
+
         # general file init
         self.temp_dir = h.init_temp_storage(temp_dir_path)
         self.remove_temp = remove_temp
         self.prompts = h.read_prompts_json(prompts_json_path)
-
+        self.filtered_word_dicts = h.read_json(filtered_words_json_path) # dictionary of words to replace
         # file transfer setup
         self.tcps = tcp.TCPServer(server_ip, server_port)
 
@@ -58,7 +59,7 @@ class GameServer:
     def init_game(self):
         # getting the players name
         user_name = self.execute_single_game_round("system", self.prompts["init"])
-        
+
         # prompting user for the story setting
         story_setting = self.execute_single_game_round("user", user_name)
 
@@ -82,7 +83,7 @@ class GameServer:
                 end = time.time()
                 print(f"Delay to begin processing llm response: {end-start}")
                 first_message = False
-                
+
             if ret is None: # message is over
                 break
             role, chunk = ret
@@ -94,7 +95,7 @@ class GameServer:
             else:
                 self.convert_tts_and_send_client(chunk, chunk_num=chunk_num)
             chunk_num+=1
-        
+
         # signals the end of a file stream
         if not self.use_local:
             self.tcps.send_signal(Signals.END_FT_STREAMED)
@@ -159,7 +160,7 @@ class GameServer:
             print("-----------------------------------------------")
 
         return client_res
-    
+
     def main_loop(self, initial_prompt):
         prompt = initial_prompt
 
@@ -188,9 +189,10 @@ class GameServer:
 
         # If this is a random round, we use randomness to determine if the child keeps playing or not
         if random_round and random.randint(1,3) == 2:
-            print("FAILURE")
+            print("FAILURE. Ending Game")
             self.llm.add_chat_history("system", self.prompts["failure"])
             random_round = False
+            self.tcps.send_signal(Signals.GAME_END)
         else:
             random_round_next_round = False
             random_round = False

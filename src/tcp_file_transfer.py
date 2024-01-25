@@ -32,7 +32,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             print(f"Signal {Signals(signal_data).name} sent successfully.")
         except Exception as e:
             print(f"Error sending signal: {e}")
-    
+
     def receive_signal(self, expected_signals=[]):
         # receives an int signal for quick communication across client/server
         try:
@@ -42,12 +42,12 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         except Exception as e:
             print(f"Error receiving signal: {e}")
             return None
-        
+
         if expected_signals != []:
             if signal not in expected_signals: # error checking
                 raise Exception(f"Unaligned signals: Expected signals: {expected_signals} but received {signal}")
         return signal
-    
+
     # send and receive data fns not currently used
     def send_data(self, data : str):
 
@@ -85,10 +85,10 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             return None
 
         return data
-    
+
     def send_file(self, file_path):
         file_path = str(file_path) # for pathlib
-        
+
         self.send_signal(Signals.FILE_SENT)
         try:
             # Send the file size
@@ -106,7 +106,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
 
     def receive_file(self, save_path):
         save_path = str(save_path) # for pathlib
-            
+
         try:
             # Receive the file size
             size_data = self.tcp_client_socket.recv(4)
@@ -129,7 +129,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             return None
 
         return save_path
-    
+
     # not currently used, implemented separately in game_server
     def send_file_stream(self, input_queue):
         # assume the input queue is a queue of file paths
@@ -139,7 +139,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             file_path = input_queue.get(timeout=10)
             if file_path is None:
                 break
-            
+
             self.send_file(file_path)
 
         self.send_signal(Signals.END_FT_STREAMED)

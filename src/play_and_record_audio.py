@@ -43,7 +43,7 @@ def record_audio_by_time(output_file_path, record_time=RECORD_TIME):
             print(f"Exception {e}")
         """
         print("SUCCESS\n")
-       
+
         #start Recording
         stream = audio.open(format=FORMAT, channels=CHANNELS,
                             rate=RATE, input=True,
@@ -55,9 +55,7 @@ def record_audio_by_time(output_file_path, record_time=RECORD_TIME):
         initial_run = True
         start = time.time()
         for i in range(0, int(RATE / CHUNK * record_time)):
-            print("about to listen to next chunk")
             data = stream.read(CHUNK)
-            print("finished listening to next chunk")
             if initial_run:
                 initial_run = False
                 print(f"\n\nSTARTED RECORDING DELAY BETWEEN START AND RECORDING: {time.time()-start}\n\n")
@@ -124,7 +122,7 @@ def play_audio_stream(input_queue):
     f = open_audio_file(initial_path)
     if f is None:
         return False # failed to play
-    
+
     # init a stream from the first input segment
     with audio_lock:
         print("play audio thread has lock")
