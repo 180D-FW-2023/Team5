@@ -19,3 +19,6 @@ CHUNK = 1024 # Block Size
 
 # game logic
 ENDING_STRING = "for playing" # chat gpt phrase that signals end
+PROBABILISTIC_FACTOR = 1 #Sets the probability that a given situation will have actions that result in probabilistic game ending
+# ^ This is the deminator in the probability where the numerator is always 1. i.e. setting this to 5 results in a 20% probability
+FAILURE_FACTOR = 1 #Same idea as previous constant except this controls the probability of failure itself

@@ -168,6 +168,29 @@ class GameServer:
         random_round_next_round = False
         random_round = False
         while True:
+
+            #If the current situation requires randomness, indicate it here
+            if random_round_next_round:
+                print("random round set to true")
+                random_round = True
+                random_round_next_round = False
+
+            #Determine if the situation immediately following this one will have a game ending probabilistically
+            
+            # (PROBABILISTIC_FACTOR)^(-1)% chance of a potentially game ending round
+            if random.randint(1,PROBABILISTIC_FACTOR) == 1:
+                print("It's random time")
+                self.llm.add_chat_history("system", self.prompts["next_round_random"])
+                random_round_next_round = True
+
+            # If this is a random round, we use randomness to determine if the child keeps playing or not
+            print(f"random_round: {random_round}")
+            if random_round and random.randint(1,FAILURE_FACTOR) == 1:
+                print("FAILURE. Ending Game")
+                self.llm.add_chat_history("system", self.prompts["failure"])
+                random_round = False
+                self.tcps.send_signal(Signals.GAME_END)
+
             self.llm.prompt_llm(prompt=prompt)
             llm_res = self.convert_and_send_llm_response()
             if "for playing" in llm_res:
@@ -176,26 +199,6 @@ class GameServer:
                 break
 
             prompt = self.get_client_response()
-
-        if random_round_next_round:
-            random_round = True
-            random_round_next_round = False
-
-        # 10% chance of a potentially game ending round
-        if random.randint(1,10) == 1:
-            print("It's random time")
-            self.llm.add_chat_history("system", self.prompts["next_round_random"])
-            random_round_next_round = True
-
-        # If this is a random round, we use randomness to determine if the child keeps playing or not
-        if random_round and random.randint(1,3) == 2:
-            print("FAILURE. Ending Game")
-            self.llm.add_chat_history("system", self.prompts["failure"])
-            random_round = False
-            self.tcps.send_signal(Signals.GAME_END)
-        else:
-            random_round_next_round = False
-            random_round = False
 
     def __del__(self):
         if self.remove_temp:
