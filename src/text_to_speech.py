@@ -24,23 +24,31 @@ from pydub import AudioSegment
 from helper import timeit
 from constants import *
 
-# Use pygame to play a wav file using default speaker
+import subprocess
+
 def play_wav(wav_path):
-# Create a lock to synchronize access to the audio playback
-    import pygame
-    audio_lock = threading.Lock()
-    pygame.init()
-    pygame.mixer.init()
+    cmd = "aplay -D hw:3,0 -f S16_LE -c2 " + wav_path
+    # Run the command in the background
+    process = subprocess.Popen(cmd, shell=True)
+    process.wait()
 
-    with audio_lock:
+# # Use pygame to play a wav file using default speaker
+# def play_wav(wav_path):
+# # Create a lock to synchronize access to the audio playback
+#     import pygame
+#     audio_lock = threading.Lock()
+#     pygame.init()
+#     pygame.mixer.init()
 
-        try:
-            sound = pygame.mixer.Sound(wav_path)
-            sound.play()
-            # Wait for the sound to finish playing
-            pygame.time.wait(int(sound.get_length() * 1000))
-        except Exception as e:
-            print(f"Error: {e}")
+#     with audio_lock:
+
+#         try:
+#             sound = pygame.mixer.Sound(wav_path)
+#             sound.play()
+#             # Wait for the sound to finish playing
+#             pygame.time.wait(int(sound.get_length() * 1000))
+#         except Exception as e:
+#             print(f"Error: {e}")
 
 # Split a long string with no punctuation into two pieces based on
 # words that sound natural with a pause before them

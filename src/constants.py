@@ -14,7 +14,7 @@ PROMPT_DELIMITERS =  ["?", "!", ".", ";"]
 
 # recording settings
 CHANNELS = 2 # Adjust to your number of channels
-RATE = 44100 # Sample Rate
+RATE = 48000 # Sample Rate
 CHUNK = 1024 # Block Size
 
 # game logic

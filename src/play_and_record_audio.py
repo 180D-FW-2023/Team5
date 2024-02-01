@@ -6,6 +6,8 @@ import threading
 
 from constants import *
 
+import subprocess
+
 global audio_lock
 audio_lock = threading.Lock()
 
@@ -30,84 +32,125 @@ def open_audio_file(path):
 
 def record_audio_by_time(output_file_path, record_time=RECORD_TIME):
     global audio_lock
-    global audio
 
     output_file_path = str(output_file_path)
-    # Startup pyaudio instance
+
     with audio_lock:
-        print("\nWe have the lock\n")
-        """
+        cmd = "arecord -D hw:3,0 -f S16_LE -c2 " + output_file_path
+        
         try:
-            audio = pyaudio.PyAudio()
-        except Exception as e:
-            print(f"Exception {e}")
-        """
-        print("SUCCESS\n")
+            # Run the command in the background
+            process = subprocess.Popen(cmd, shell=True)
+            process.wait(timeout=record_time)
 
-        #start Recording
-        stream = audio.open(format=FORMAT, channels=CHANNELS,
-                            rate=RATE, input=True,
-                            frames_per_buffer=CHUNK)
+        except subprocess.TimeoutExpired:
+            # If the process exceeds the timeout, terminate it
+            process.terminate()
 
-        frames = []
-        print("no seg fault")
-        # Record for RECORD_SECONDS
-        initial_run = True
-        start = time.time()
-        for i in range(0, int(RATE / CHUNK * record_time)):
-            data = stream.read(CHUNK)
-            if initial_run:
-                initial_run = False
-                print(f"\n\nSTARTED RECORDING DELAY BETWEEN START AND RECORDING: {time.time()-start}\n\n")
-            frames.append(data)
+            # Wait for a moment to allow termination to complete
+            time.sleep(1)
 
-
-        # Stop Recording
-        stream.stop_stream()
-        stream.close()
-        #audio.terminate()
-
-        # Write your new .wav file with built in Python 3 Wave module
-        waveFile = wave.open(output_file_path, 'wb')
-        waveFile.setnchannels(CHANNELS)
-        waveFile.setsampwidth(audio.get_sample_size(FORMAT))
-        waveFile.setframerate(RATE)
-        waveFile.writeframes(b''.join(frames))
-        waveFile.close()
+            # Kill the process forcefully if it hasn't terminated yet
+            if process.poll() is None:
+                process.kill()
 
     return output_file_path
 
+# def record_audio_by_time(output_file_path, record_time=RECORD_TIME):
+#     global audio_lock
+#     global audio
+
+#     output_file_path = str(output_file_path)
+#     # Startup pyaudio instance
+#     with audio_lock:
+#         print("\nWe have the lock\n")
+#         """
+#         try:
+#             audio = pyaudio.PyAudio()
+#         except Exception as e:
+#             print(f"Exception {e}")
+#         """
+#         print("SUCCESS\n")
+       
+#         #start Recording
+#         stream = audio.open(format=FORMAT, channels=CHANNELS,
+#                             rate=RATE, input=True,
+#                             frames_per_buffer=CHUNK)
+
+#         frames = []
+#         print("no seg fault")
+#         # Record for RECORD_SECONDS
+#         initial_run = True
+#         start = time.time()
+#         for i in range(0, int(RATE / CHUNK * record_time)):
+#             print("about to listen to next chunk")
+#             data = stream.read(CHUNK)
+#             print("finished listening to next chunk")
+#             if initial_run:
+#                 initial_run = False
+#                 print(f"\n\nSTARTED RECORDING DELAY BETWEEN START AND RECORDING: {time.time()-start}\n\n")
+#             frames.append(data)
+
+
+#         # Stop Recording
+#         stream.stop_stream()
+#         stream.close()
+#         #audio.terminate()
+
+#         # Write your new .wav file with built in Python 3 Wave module
+#         waveFile = wave.open(output_file_path, 'wb')
+#         waveFile.setnchannels(CHANNELS)
+#         waveFile.setsampwidth(audio.get_sample_size(FORMAT))
+#         waveFile.setframerate(RATE)
+#         waveFile.writeframes(b''.join(frames))
+#         waveFile.close()
+
+#     return output_file_path
+
 def play_audio(path):
     global audio_lock
-    global audio
 
     path = str(path)
-    f = open_audio_file(path)
-    if f is None:
-        return False # failed to play
 
     with audio_lock:
-        print("play audio thread acquired lock")
-        stream = audio.open(
-                    format = audio.get_format_from_width(f.getsampwidth()),
-                    channels = f.getnchannels(),
-                    rate = f.getframerate(),
-                    output = True )
+        cmd = "aplay -D hw:3,0 -f S16_LE -c2 " + path
+        # Run the command in the background
+        process = subprocess.Popen(cmd, shell=True)
+        process.wait()
 
-        data = f.readframes(CHUNK)
-        # play stream (looping from beginning of file to the end)
-        while data:
-            # writing to the stream is what *actually* plays the sound.
-            stream.write(data)
-            data = f.readframes(CHUNK)
-
-
-        # cleanup stuff.
-        f.close()
-        stream.close()
-        audio.terminate()
-        print("play audio thread releasing audio lock")
     return True
+
+# def play_audio(path):
+#     global audio_lock
+#     global audio
+
+#     path = str(path)
+#     f = open_audio_file(path)
+#     if f is None:
+#         return False # failed to play
+
+#     with audio_lock:
+#         print("play audio thread acquired lock")
+#         stream = audio.open(
+#                     format = audio.get_format_from_width(f.getsampwidth()),
+#                     channels = f.getnchannels(),
+#                     rate = f.getframerate(),
+#                     output = True )
+
+#         data = f.readframes(CHUNK)
+#         # play stream (looping from beginning of file to the end)
+#         while data:
+#             # writing to the stream is what *actually* plays the sound.
+#             stream.write(data)
+#             data = f.readframes(CHUNK)
+
+
+#         # cleanup stuff.
+#         f.close()
+#         stream.close()
+#         audio.terminate()
+#         print("play audio thread releasing audio lock")
+#     return True
 
 def play_audio_stream(input_queue):
     print("Entering play audio stream function")
