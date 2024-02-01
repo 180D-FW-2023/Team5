@@ -9,7 +9,7 @@ import text_to_speech as tba
 
 class LLM:
     # class with state. Tracks the chat history as the person chats
-    def __init__(self, key, stream=True):
+    def __init__(self, key, stream=True, filtered_word_dict=None):
         # Defaults to getting the key using os.environ.get("OPENAI_API_KEY") in .env file
         # However, sometimes this causes trouble so setting api_key=key ensures the correct key is selected
         self.client = OpenAI(api_key=key)
@@ -21,18 +21,27 @@ class LLM:
         self.prompt_queue = queue.Queue(maxsize=3) # a queue to send prompts for processing to the llm thread. None signals the end of the process
 
         # expected to clear every new prompt so we dont need to indicate the start
-        self.response_queue = queue.Queue(maxsize=20) # a queue of all the sentences received from llm. None means the previous message is done. 
+        self.response_queue = queue.Queue(maxsize=20) # a queue of all the sentences received from llm. None means the previous message is done.
 
         self.stream = stream
 
+        # if statement to avoid some weird instance stuff with args
+        # dictionary of bad words and relevant replacement
+        if filtered_word_dict is None:
+            self.filtered_word_dict = {}
+        else:
+            self.filtered_word_dict = filtered_word_dict
+
         # initialize a separate thread for all the thread stuff for multithreading
-        self.producer_thread = threading.Thread(target=llm_producer, 
-                                                args=(self.prompt_queue, 
-                                                      self.response_queue, 
-                                                      self.client, 
-                                                      self.stream), 
+        self.producer_thread = threading.Thread(target=llm_producer,
+                                                args=(self.prompt_queue,
+                                                      self.response_queue,
+                                                      self.client,
+                                                      self.filtered_word_dict,
+                                                      self.stream),
                                                 daemon=True)
         self.producer_thread.start()
+
 
     def __del__(self):
         self.producer_thread.join()
@@ -98,7 +107,23 @@ def split_delimiters(input_string, delimiters):
 
     return input_string.split("**&**")
 
-def llm_producer(input_queue, output_queue, client, stream=True, n_tokens=2):
+def replace_words(s, filtered_words_dict):
+    if filtered_words_dict == {}:
+        return s
+
+    s_split = s.split(" ")
+
+    new_s = []
+    for word in s_split:
+        if word in filtered_words_dict:
+            new_s.append(filtered_words_dict[word])
+        else:
+            new_s.append(word)
+
+    return " ".join(new_s)
+
+
+def llm_producer(input_queue, output_queue, client, filtered_words_dict, stream=True, n_tokens=2):
     print(f"LLM STREAM STATUS: {stream}")
     # intended for separate thread
     # n tokens is number of separated tokens to push with each chunk
@@ -118,6 +143,7 @@ def llm_producer(input_queue, output_queue, client, stream=True, n_tokens=2):
         if not stream:
             res_role = res.choices[0].message.role
             res_msg = res.choices[0].message.content
+            res_msg = replace_words(res_msg, filtered_words_dict)
 
             output_queue.put((res_role, res_msg))
         else:
@@ -132,6 +158,7 @@ def llm_producer(input_queue, output_queue, client, stream=True, n_tokens=2):
                 chunk_role = chunk.choices[0].delta.role
                 curr_role = chunk_role if chunk_role is not None else curr_role # only the first chunk of the message has a role
                 chunk_msg = chunk.choices[0].delta.content
+                chunk_msg = replace_words(chunk_msg, filtered_words_dict)
 
                 if has_chars(chunk_msg, PROMPT_DELIMITERS): # means a sentence has passed
                     split_chunk_msg = split_delimiters(chunk_msg, PROMPT_DELIMITERS)
@@ -147,14 +174,14 @@ def llm_producer(input_queue, output_queue, client, stream=True, n_tokens=2):
                     # TODO: COULD HAVE BEEN MULTIPLE SENTENCES IN ONE CHUNK
                 else:
                     chunks.append(chunk_msg)
-            
+
             if len(to_push) != 0: # clear the to push buffer
                 output_queue.put((curr_role, "".join(to_push)))
 
             if len(chunks) != 0:
                 output_queue.put((curr_role, "".join(chunks))) # put the rest of the chunks usually empty but jic
 
-        
+
         # sends a signal to indicate the end of a prompt response
         output_queue.put(None)
 

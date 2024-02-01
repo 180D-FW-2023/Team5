@@ -25,10 +25,14 @@ def read_file_as_str(file_path):
 
     return data
 
-def read_prompts_json(json_path):
+def read_json(json_path):
     with open(json_path, "r") as f:
-        prompts = json.load(f)
-    
+        js = json.load(f)
+
+    return js
+
+def read_prompts_json(json_path):
+    prompts = read_json(json_path)
     for key, val in prompts.items():
         prompts[key] = val.replace("\n", "")
 

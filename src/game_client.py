@@ -1,9 +1,10 @@
 import os
+import sys
 import shutil
 from pathlib import Path
 import queue
 from dotenv import load_dotenv
-import threading 
+import threading
 import time
 
 from signals import Signals
@@ -34,7 +35,7 @@ class GameClient:
         #  client setup
         self.tcpc = tcp.TCPClient(server_ip, server_port) # connects to server in init
         self.tcpc.connect_to_server()
-        
+
 
     def main_loop(self):
         output_queue = queue.Queue(maxsize=10)
@@ -51,14 +52,18 @@ class GameClient:
                 os.remove(received_file_path)
             elif signal == Signals.INIT_FT_STREAMED:
                 # separate thread for audio playback
-                audio_playback_thread = threading.Thread(target=am.play_audio_stream, 
+                audio_playback_thread = threading.Thread(target=am.play_audio_stream,
                                                     args=(output_queue,),
                                                         daemon=True)
                 audio_playback_thread.start()
                 self.tcpc.receive_file_stream(output_queue, self.temp_dir / "playback", ".wav", file_name_tag="playback")
                 audio_playback_thread.join() # wait for playback to finish
                 # shutil.rmtree(self.temp_dir / "playback")
-            elif signal != Signals.END_FT_STREAMED:
+            elif signal == Signals.GAME_END:
+                print("Game Ended. Closing Client")
+                sys.exit(0)
+            else:
+                # TODO: Handle other signals
                 raise NotImplementedError(f"Signal {Signals(signal).name} is not implemented")
 
 
