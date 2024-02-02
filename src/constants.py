@@ -1,5 +1,5 @@
 #Sets the record time (in seconds) when the RPI listens to the child
-RECORD_TIME = 2.5
+RECORD_TIME = 5
 
 # sets the time in seconds to wait between playing and recording
 AUDIO_SWITCH_DELAY = 3

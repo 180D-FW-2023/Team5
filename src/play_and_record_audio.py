@@ -3,21 +3,22 @@ import wave
 import pyaudio
 import queue
 import threading
+import os
+import subprocess
+import signal 
 
 from constants import *
-
-import subprocess
 
 global audio_lock
 audio_lock = threading.Lock()
 
 FORMAT = pyaudio.paInt16 # data type formate
 
-global audio
-print("Creating pyaudio instance")
+#global audio
+#print("Creating pyaudio instance")
 # note: this takes a minute to initialize but since pyaudio doesn't like opening and closing multiple instances of pyaudio, we have to make it global
-audio = pyaudio.PyAudio()
-print("Finished creating pyaudio instance")
+#audio = pyaudio.PyAudio()
+#print("Finished creating pyaudio instance")
 
 def open_audio_file(path):
     path = str(path)
@@ -36,24 +37,24 @@ def record_audio_by_time(output_file_path, record_time=RECORD_TIME):
     output_file_path = str(output_file_path)
 
     with audio_lock:
-        cmd = "arecord -D hw:3,0 -f S16_LE -c2 " + output_file_path
-        
+        print("Got the lock")
+        #cmd = "arecord -D hw:3,0 -f S16_LE -c2 -r " + str(RATE) + " " + output_file_path
+        cmd = ["arecord", "-f", "dat", "-D", "hw:3,0", output_file_path]
         try:
             # Run the command in the background
-            process = subprocess.Popen(cmd, shell=True)
-            process.wait(timeout=record_time)
-
-        except subprocess.TimeoutExpired:
-            # If the process exceeds the timeout, terminate it
-            process.terminate()
-
-            # Wait for a moment to allow termination to complete
-            time.sleep(1)
-
-            # Kill the process forcefully if it hasn't terminated yet
-            if process.poll() is None:
-                process.kill()
-
+            process = subprocess.Popen(cmd)
+            time.sleep(record_time)
+            print(str(process.pid))
+            #os.killpg(process.pid, signal.SIGTERM)
+            #process.wait()
+            process.kill()
+            #process.wait()
+        except subprocess.CalledProcessError as e:
+            if "Device or resource busy" in str(e):
+                print("Error: Device or resource busy. Another application may be using the soundcard.")
+            else:
+                print(f"An error occurred: {e}")
+    print("finished recording")
     return output_file_path
 
 # def record_audio_by_time(output_file_path, record_time=RECORD_TIME):
@@ -107,17 +108,17 @@ def record_audio_by_time(output_file_path, record_time=RECORD_TIME):
 
 #     return output_file_path
 
+
 def play_audio(path):
     global audio_lock
 
     path = str(path)
 
     with audio_lock:
-        cmd = "aplay -D hw:3,0 -f S16_LE -c2 " + path
-        # Run the command in the background
-        process = subprocess.Popen(cmd, shell=True)
-        process.wait()
+        print("Got the lock to play")
+        play_audio_with_lock(path)
 
+    print("Done playing audio")
     return True
 
 # def play_audio(path):
@@ -152,39 +153,26 @@ def play_audio(path):
 #         print("play audio thread releasing audio lock")
 #     return True
 
+def play_audio_with_lock(path):
+    cmd = ["aplay", "-D", "hw:3,0", "-f", "S16_LE", "-c2", path]
+    # Run the command in the background
+    process = subprocess.Popen(cmd)
+    process.wait()
+
 def play_audio_stream(input_queue):
     print("Entering play audio stream function")
     # takes in a queue of file paths and continuously plays
     # None is expected as the sentinel otherwise itll just keep playing cause fuck it we ball
 
     global audio_lock
-    global audio
 
     print("Beginning to wait for input queue")
     initial_path = input_queue.get(timeout=10) #want this one to be blocking just so it will have something
-    f = open_audio_file(initial_path)
-    if f is None:
-        return False # failed to play
 
     # init a stream from the first input segment
     with audio_lock:
         print("play audio thread has lock")
-        #audio = pyaudio.PyAudio()
-        stream = audio.open(
-                    format = audio.get_format_from_width(f.getsampwidth()),
-                    channels = f.getnchannels(),
-                    rate = f.getframerate(),
-                    output = True
-                    )
-
-        # play the initial segment
-        data = f.readframes(CHUNK)
-        # play stream (looping from beginning of file to the end)
-        while data:
-            # writing to the stream is what *actually* plays the sound.
-            stream.write(data)
-            data = f.readframes(CHUNK)
-        f.close()
+        play_audio_with_lock(initial_path)
 
         # continuously play the rest of the input queue
         # adding a timeout just in case
@@ -194,32 +182,82 @@ def play_audio_stream(input_queue):
             if path is None: # sentinel
                 break
 
-            f = open_audio_file(path)
+            play_audio_with_lock(path)
 
-            data = f.readframes(CHUNK)
-            while data:
-                stream.write(data)
-                data = f.readframes(CHUNK)
-            f.close() # close to prevent dangling fd
-
-        # clean up
-        stream.close()
-        #audio.terminate()
         print("Audio played successfully")
         print("play audio thread releasing lock")
     return True
 
+
+# def play_audio_stream(input_queue):
+#     print("Entering play audio stream function")
+#     # takes in a queue of file paths and continuously plays
+#     # None is expected as the sentinel otherwise itll just keep playing cause fuck it we ball
+
+#     global audio_lock
+#     global audio
+
+#     print("Beginning to wait for input queue")
+#     initial_path = input_queue.get(timeout=10) #want this one to be blocking just so it will have something
+#     f = open_audio_file(initial_path)
+#     if f is None:
+#         return False # failed to play
+
+#     # init a stream from the first input segment
+#     with audio_lock:
+#         print("play audio thread has lock")
+#         #audio = pyaudio.PyAudio()
+#         stream = audio.open(
+#                     format = audio.get_format_from_width(f.getsampwidth()),
+#                     channels = f.getnchannels(),
+#                     rate = f.getframerate(),
+#                     output = True
+#                     )
+
+#         # play the initial segment
+#         data = f.readframes(CHUNK)
+#         # play stream (looping from beginning of file to the end)
+#         while data:
+#             # writing to the stream is what *actually* plays the sound.
+#             stream.write(data)
+#             data = f.readframes(CHUNK)
+#         f.close()
+
+#         # continuously play the rest of the input queue
+#         # adding a timeout just in case
+#         start_time = time.time()
+#         while True:
+#             path = input_queue.get(timeout=10)
+#             if path is None: # sentinel
+#                 break
+
+#             f = open_audio_file(path)
+
+#             data = f.readframes(CHUNK)
+#             while data:
+#                 stream.write(data)
+#                 data = f.readframes(CHUNK)
+#             f.close() # close to prevent dangling fd
+
+#         # clean up
+#         stream.close()
+#         #audio.terminate()
+#         print("Audio played successfully")
+#         print("play audio thread releasing lock")
+#     return True
+
+
 if __name__ == "__main__":
-    # record_audio_by_time("out.wav")
-    # play_audio("out.wav")
+    record_audio_by_time("out.wav")
+    play_audio("out.wav")
 
-    # testing streaming audio
-    test_queue = queue.Queue()
-    test_path = r"C:\code\ece180da\final_project\test_data\test_capstone.wav"
-    test_queue.put(test_path)
-    test_queue.put(test_path)
-    test_queue.put(test_path)
-    test_queue.put(test_path)
-    test_queue.put(None)
+    ## testing streaming audio
+    #test_queue = queue.Queue()
+    #test_path = r"C:\code\ece180da\final_project\test_data\test_capstone.wav"
+    #test_queue.put(test_path)
+    #test_queue.put(test_path)
+    #test_queue.put(test_path)
+    #test_queue.put(test_path)
+    #test_queue.put(None)
 
-    play_audio_stream(test_queue)
+    #play_audio_stream(test_queue)

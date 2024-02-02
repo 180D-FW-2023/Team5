@@ -174,6 +174,7 @@ class GameServer:
             if "for playing" in llm_res:
                 print("Game is over!")
                 # send termination signal here
+                self.tcps.send_signal(Signals.GAME_END)
                 break
 
             prompt = self.get_client_response()
