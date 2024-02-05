@@ -113,12 +113,12 @@ class GameServer:
 
         llm_res = self.convert_and_send_llm_response()
 
-        client_res = self.get_client_response()
+        sig, client_res = self.get_client_response()
 
         # locks and continuously asks for a new response
         while client_res is None and force_response:
             self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?")
-            client_res = self.get_client_response()
+            sig, client_res = self.get_client_response()
 
         return client_res
 
@@ -151,16 +151,26 @@ class GameServer:
         if not self.use_local:
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
-            self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT])
-            client_wav_path = self.tcps.receive_file(client_wav_path)
-            client_res = timeit(sp.recognize_wav)(client_wav_path)
+            received_signal = self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT,
+                                                                         Signals.IMU_TURN_LEFT,
+                                                                         Signals.IMU_TURN_RIGHT])
+            if received_signal == Signals.FILE_SENT: # received an audio file
+                client_wav_path = self.tcps.receive_file(client_wav_path)
+                client_res = timeit(sp.recognize_wav)(client_wav_path)
+                print(f"You said: {client_res}")
 
-            print(f"You said: {client_res}")
-        else: # local mode that just takes a user input
+            # imu signals
+            elif received_signal == Signals.IMU_TURN_LEFT:
+                client_res = self.prompts["IMU_turn_left"]
+            elif received_signal == Signals.IMU_TURN_RIGHT:
+                client_res = self.prompts["IMU_turn_right"]
+            # handling imu signals
+        else: # local mode that just takes a user input for text
+            received_signal = Signals.FILE_SENT
             client_res = input("--------> You respond: ")
             print("-----------------------------------------------")
 
-        return client_res
+        return received_signal, client_res
 
     def main_loop(self, initial_prompt):
         prompt = initial_prompt
@@ -177,7 +187,7 @@ class GameServer:
                 self.tcps.send_signal(Signals.GAME_END)
                 break
 
-            prompt = self.get_client_response()
+            sig, prompt = self.get_client_response()
             print("Got client response")
 
         if random_round_next_round:
