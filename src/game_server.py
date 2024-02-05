@@ -14,12 +14,25 @@ from signals import Signals
 import helper as h
 from helper import timeit
 from constants import *
+import sys
+import re
 
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
 
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)
+
+def extract_option_number(input_string):
+    # Use regular expression to find the first occurrence of a number in the string
+    match = re.search(r'\b\d+\b', input_string)
+    
+    if match:
+        # Extract and return the matched number as an integer
+        return int(match.group())
+    else:
+        # Return None if no number is found in the input string
+        return None
 
 #TODO: HANDLE TERMINATIONS
 
@@ -44,6 +57,8 @@ class GameServer:
 
         # init LLM handler
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
+
+        self.ending_prob_fact = INIT_ENDING_PROBABILISTIC_FACTOR
 
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
@@ -161,44 +176,83 @@ class GameServer:
 
         return client_res
 
+
+    def update_ending_prob_factor(self):
+        if self.ending_prob_fact >= 4: # sets the highest probability of 
+            self.ending_prob_fact -= 1
+
     def main_loop(self, initial_prompt):
         prompt = initial_prompt
-
+        round_num = 0 # round 0 is the first round that a story decision is presented to the child
         # Variables for the game logic
-        random_round_next_round = False
-        random_round = False
+        enforce_game_enders = False
         while True:
-
-            #If the current situation requires randomness, indicate it here
-            if random_round_next_round:
-                print("random round set to true")
-                random_round = True
-                random_round_next_round = False
-
-            #Determine if the situation immediately following this one will have a game ending probabilistically
-            
+                
+            #Determine if this situation will have a game ending choice probabilistically
             # (PROBABILISTIC_FACTOR)^(-1)% chance of a potentially game ending round
-            if random.randint(1,PROBABILISTIC_FACTOR) == 1:
-                print("It's random time")
+            if round_num >= NUM_SAFE_ROUNDS and random.randint(1,1) == 1:
+                print("This round will have potential game enders")
                 self.llm.add_chat_history("system", self.prompts["next_round_random"])
-                random_round_next_round = True
-
-            # If this is a random round, we use randomness to determine if the child keeps playing or not
-            print(f"random_round: {random_round}")
-            if random_round and random.randint(1,FAILURE_FACTOR) == 1:
-                print("FAILURE. Ending Game")
-                self.llm.add_chat_history("system", self.prompts["failure"])
-                random_round = False
-                self.tcps.send_signal(Signals.GAME_END)
+                enforce_game_enders = True
+            else:
+                enforce_game_enders = False
 
             self.llm.prompt_llm(prompt=prompt)
             llm_res = self.convert_and_send_llm_response()
+
+            #TODO clean this up
             if "for playing" in llm_res:
                 print("Game is over!")
                 # send termination signal here
                 break
 
             prompt = self.get_client_response()
+
+            # If we are in a game ending probabilistic round, handle cases when the child chooses a failure option intelligently
+            # Note that we create separate LLM API calls to determine option choice and failure option. Empirically, the additional delay is negligible.
+            if enforce_game_enders:
+
+                # Ask LLM to determine which option the child chose so we have a numerical value [1, 3]
+                option_check_string = llm_res + '\n\n' + prompt + '\n\n' + self.prompts["option_check"]
+                selected_choice = self.llm.prompt_llm_single(prompt=option_check_string)
+                int_selected_choice = extract_option_number(selected_choice)
+
+                print("**START DEBUG INFO**")
+                if int_selected_choice is None:
+                    int_selected_choice = 1
+                    print("Unable to parse selection option number from:\n" + selected_choice)
+                else:
+                    print(f"Selected option number: {int_selected_choice} from: \"{selected_choice}\"")
+                print("**END DEBUG INFO**")
+                
+
+                # Ask LLM to determine which option is most likely to end in failure so we have a numerical value [1, 3]
+                print("**START DEBUG INFO**")
+                failure_check_string = self.prompts["which_option_fails"] + "\n\n" + llm_res
+                failure_option = self.llm.prompt_llm_single(prompt=failure_check_string)
+                int_failure_choice = extract_option_number(failure_option)
+                if int_failure_choice is None:
+                    int_failure_choice = 1
+                    print("Unable to parse failure option number from:\n" + failure_option)
+                else:
+                    print(f"Failure option number: {int_failure_choice} from: \"{failure_option}\"")
+                print("**END DEBUG INFO**")
+                
+
+                # If the child selected the game ending option
+                if int_failure_choice == int_selected_choice:
+                    print("FAILURE. Ending Game")
+                    if self.use_local:
+                        sys.exit()
+                    else:
+                        self.llm.add_chat_history("system", self.prompts["failure"])
+                        self.tcps.send_signal(Signals.GAME_END)
+
+
+            if round_num >= 2:
+                self.update_ending_prob_factor()
+
+            round_num += 1
 
     def __del__(self):
         if self.remove_temp:
