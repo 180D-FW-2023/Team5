@@ -7,6 +7,7 @@ RAD_TO_DEG = 57.29578
 M_PI = 3.14159265358979323846
 G_GAIN = 0.070  # [deg/s/LSB]  If you change the dps for gyro, you need to upda>
 AA =  0.40      # Complementary filter constant
+NUM_ITERS = 30
 
 class ImuHandler:
     def __init__(self,):
@@ -32,11 +33,15 @@ class ImuHandler:
         gyroZangle = 0.0
         CFangleX = 0.0
         CFangleY = 0.0
+        SumCFangleY = 0.0
         past_time = time.time()
 
-        while True:
+        for j in range(NUM_ITERS):
             output_str = ""
             
+            if j == 20:
+                print("\nStarting averaging\n")
+
             #Read the accelerometer,gyroscope and magnetometer values
             ACCx = i.readACCx()
             ACCy = i.readACCy()
@@ -48,7 +53,8 @@ class ImuHandler:
             # Display loop time
             curr_time = time.time()
             loop_time = curr_time - past_time
-            output_str += "Loop time: %5.2f " % (loop_time)
+            if j < 20:
+                output_str += "Loop time: %5.2f " % (loop_time)
             past_time = curr_time
 
             #Convert Gyro raw to degrees per second
@@ -76,11 +82,27 @@ class ImuHandler:
             CFangleX=AA*(CFangleX+rate_gyr_x*loop_time) +(1 - AA) * AccXangle
             CFangleY=AA*(CFangleY+rate_gyr_y*loop_time) +(1 - AA) * AccYangle
 
+            if j == 0:
+                first_CFangleY = CFangleY
+            elif j > 19:
+                SumCFangleY += CFangleY
+
             output_str +="\t# CFangleY Angle %5.2f #" % (CFangleY)
 
             print(output_str)
 
             time.sleep(0.03)
+        
+        print("First Y angle: %5.2f \nLast Y angle: %5.2f" % (first_CFangleY,CFangleY)) 
+        avg_ending_angle = SumCFangleY / 10.0
+        print("Average Ending angle: %5.2f" % (avg_ending_angle))
+        if avg_ending_angle - first_CFangleY > 50:
+            print("Right turn detected")
+            return True
+        elif first_CFangleY - avg_ending_angle > 50:
+            print("Left turn detected")
+            return False
+        return None
 
 
             

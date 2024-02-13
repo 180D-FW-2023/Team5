@@ -46,6 +46,7 @@ class GameServer:
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
+        self.imu_round = False     # determines whether current round will use IMU data rather than speech recognition
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
         print("-----------------------------------------------")
         print("\n\n\tGame Initialization Complete\n\n")
@@ -70,8 +71,11 @@ class GameServer:
         chunks = []
         role = None
 
-        # first signal indicated the start of a streamed message
+        # For IMU round, send IMU_ROUND signal first
+        if self.imu_round:
+            self.tcps.send_signal(Signals.IMU_ROUND)
 
+        # Otherwise, first signal indicates the start of a streamed message
         if not self.use_local:
             self.tcps.send_signal(Signals.INIT_FT_STREAMED)
         first_message = True
@@ -179,6 +183,12 @@ class GameServer:
         random_round_next_round = False
         random_round = False
         while True:
+            # 33% chance of IMU round
+            if random.randint(1,3) == 1 and prompt != initial_prompt:
+                self.imu_round = True
+                # Add chat history to affect the next LLM response
+                self.llm.add_chat_history("system", self.prompts["this_round_imu"])
+
             self.llm.prompt_llm(prompt=prompt)
             llm_res = self.convert_and_send_llm_response()
             if "for playing" in llm_res:
@@ -186,6 +196,8 @@ class GameServer:
                 # send termination signal here
                 self.tcps.send_signal(Signals.GAME_END)
                 break
+
+            self.imu_round = False
 
             sig, prompt = self.get_client_response()
             print("Got client response")
