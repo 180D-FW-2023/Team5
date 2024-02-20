@@ -61,6 +61,7 @@ class GameServer:
         self.ending_prob_fact = INIT_ENDING_PROBABILISTIC_FACTOR
 
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
+        self.imu_round = False     # determines whether current round will use IMU data rather than speech recognition
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
         print("-----------------------------------------------")
         print("\n\n\tGame Initialization Complete\n\n")
@@ -85,8 +86,11 @@ class GameServer:
         chunks = []
         role = None
 
-        # first signal indicated the start of a streamed message
+        # For IMU round, send IMU_ROUND signal first
+        if self.imu_round:
+            self.tcps.send_signal(Signals.IMU_ROUND)
 
+        # Otherwise, first signal indicates the start of a streamed message
         if not self.use_local:
             self.tcps.send_signal(Signals.INIT_FT_STREAMED)
         first_message = True
@@ -128,12 +132,12 @@ class GameServer:
 
         llm_res = self.convert_and_send_llm_response()
 
-        client_res = self.get_client_response()
+        sig, client_res = self.get_client_response()
 
         # locks and continuously asks for a new response
         while client_res is None and force_response:
-            self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?")
-            client_res = self.get_client_response()
+            self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?", 0)
+            sig, client_res = self.get_client_response()
 
         return client_res
 
@@ -161,20 +165,31 @@ class GameServer:
                 print(f"[CHUNK {chunk_num}] {audio_text}")
 
     def get_client_response(self):
+        print("Waiting for client response")
         # get a client wav message and process
         if not self.use_local:
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
-            self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT])
-            client_wav_path = self.tcps.receive_file(client_wav_path)
-            client_res = timeit(sp.recognize_wav)(client_wav_path)
+            received_signal = self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT,
+                                                                         Signals.IMU_TURN_LEFT,
+                                                                         Signals.IMU_TURN_RIGHT])
+            if received_signal == Signals.FILE_SENT: # received an audio file
+                client_wav_path = self.tcps.receive_file(client_wav_path)
+                client_res = timeit(sp.recognize_wav)(client_wav_path)
+                print(f"You said: {client_res}")
 
-            print(f"You said: {client_res}")
-        else: # local mode that just takes a user input
+            # imu signals
+            elif received_signal == Signals.IMU_TURN_LEFT:
+                client_res = self.prompts["IMU_turn_left"]
+            elif received_signal == Signals.IMU_TURN_RIGHT:
+                client_res = self.prompts["IMU_turn_right"]
+            # handling imu signals
+        else: # local mode that just takes a user input for text
+            received_signal = Signals.FILE_SENT
             client_res = input("--------> You respond: ")
             print("-----------------------------------------------")
 
-        return client_res
+        return received_signal, client_res
 
 
     def update_ending_prob_factor(self):
@@ -187,15 +202,20 @@ class GameServer:
         # Variables for the game logic
         enforce_game_enders = False
         while True:
-                
             #Determine if this situation will have a game ending choice probabilistically
             # (PROBABILISTIC_FACTOR)^(-1)% chance of a potentially game ending round
-            if round_num >= NUM_SAFE_ROUNDS and random.randint(1,1) == 1:
-                print("This round will have potential game enders")
+            #if round_num >= NUM_SAFE_ROUNDS and random.randint(1,1) == 1:
+            if round_num == 3:
+                print("----------This round will have potential game enders---------")
                 self.llm.add_chat_history("system", self.prompts["next_round_random"])
                 enforce_game_enders = True
             else:
                 enforce_game_enders = False
+            # 33% chance of IMU round
+            if (not enforce_game_enders) and (random.randint(1,1) == 0 and prompt != initial_prompt):
+                self.imu_round = True
+                # Add chat history to affect the next LLM response
+                self.llm.add_chat_history("system", self.prompts["this_round_imu"])
 
             self.llm.prompt_llm(prompt=prompt)
             llm_res = self.convert_and_send_llm_response()
@@ -204,9 +224,13 @@ class GameServer:
             if "for playing" in llm_res:
                 print("Game is over!")
                 # send termination signal here
+                self.tcps.send_signal(Signals.GAME_END)
                 break
 
-            prompt = self.get_client_response()
+            self.imu_round = False
+
+            sig, prompt = self.get_client_response()
+            print("Got client response")
 
             # If we are in a game ending probabilistic round, handle cases when the child chooses a failure option intelligently
             # Note that we create separate LLM API calls to determine option choice and failure option. Empirically, the additional delay is negligible.
@@ -240,12 +264,14 @@ class GameServer:
                 
 
                 # If the child selected the game ending option
-                if int_failure_choice == int_selected_choice:
+                if True:
                     print("FAILURE. Ending Game")
                     if self.use_local:
                         sys.exit()
                     else:
                         self.llm.add_chat_history("system", self.prompts["failure"])
+                        self.llm.prompt_llm(prompt=prompt)
+                        llm_res = self.convert_and_send_llm_response()
                         self.tcps.send_signal(Signals.GAME_END)
 
 

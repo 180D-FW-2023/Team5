@@ -15,6 +15,8 @@ import time
 import threading
 import shutil
 
+#os.environ["FFMPEG_BINARY"] = r"C:\ffmpeg-2023-12-04-git-8c117b75af-full_build\ffmpeg-2023-12-04-git-8c117b75af-full_build\bin\ffmpeg.exe"
+
 import ffmpeg
 from gtts import gTTS
 from pydub import AudioSegment
@@ -22,23 +24,31 @@ from pydub import AudioSegment
 from helper import timeit
 from constants import *
 
-# Use pygame to play a wav file using default speaker
+import subprocess
+
 def play_wav(wav_path):
-# Create a lock to synchronize access to the audio playback
-    import pygame
-    audio_lock = threading.Lock()
-    pygame.init()
-    pygame.mixer.init()
+    cmd = "aplay -D hw:3,0 -f S16_LE -c2 " + wav_path
+    # Run the command in the background
+    process = subprocess.Popen(cmd, shell=True)
+    process.wait()
 
-    with audio_lock:
+# # Use pygame to play a wav file using default speaker
+# def play_wav(wav_path):
+# # Create a lock to synchronize access to the audio playback
+#     import pygame
+#     audio_lock = threading.Lock()
+#     pygame.init()
+#     pygame.mixer.init()
 
-        try:
-            sound = pygame.mixer.Sound(wav_path)
-            sound.play()
-            # Wait for the sound to finish playing
-            pygame.time.wait(int(sound.get_length() * 1000))
-        except Exception as e:
-            print(f"Error: {e}")
+#     with audio_lock:
+
+#         try:
+#             sound = pygame.mixer.Sound(wav_path)
+#             sound.play()
+#             # Wait for the sound to finish playing
+#             pygame.time.wait(int(sound.get_length() * 1000))
+#         except Exception as e:
+#             print(f"Error: {e}")
 
 # Split a long string with no punctuation into two pieces based on
 # words that sound natural with a pause before them
@@ -155,6 +165,9 @@ def convert_text_to_bear_audio_opt(input_text,
                           ) # =None is an ffmpeg flag with no input kw
     stream = stream.filter("rubberband",
                            pitch=pitch,
+                           tempo=tempo_multiplier
+                           )
+    stream = stream.filter("atempo",
                            tempo=tempo_multiplier
                            )
     stream = stream.output(str(output_path),

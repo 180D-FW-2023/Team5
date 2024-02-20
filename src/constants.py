@@ -1,5 +1,5 @@
 #Sets the record time (in seconds) when the RPI listens to the child
-RECORD_TIME = 2.5
+RECORD_TIME = 3
 
 # sets the time in seconds to wait between playing and recording
 AUDIO_SWITCH_DELAY = 3
@@ -14,7 +14,7 @@ PROMPT_DELIMITERS =  ["?", "!", ".", ";"]
 
 # recording settings
 CHANNELS = 2 # Adjust to your number of channels
-RATE = 44100 # Sample Rate
+RATE = 48000 # Sample Rate
 CHUNK = 1024 # Block Size
 
 # game logic
