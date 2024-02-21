@@ -1,10 +1,58 @@
 
 # Interactive Adventure Game Toy
 
-Teddy bear with IOT-enabled speaker to play interactive choose-your-own-adventure games
-using ChatGPT as a backend
+Teddy bear with IOT-enabled speaker to play interactive choose-your-own-adventure games using ChatGPT as a backend.
 
-Use python game_server.py -d to enable local debugging
+#Installation
+
+## Server Setup
+Run ```pip install -r requirements-server.txt``` to install all necessary packages on the local server.
+
+Get your OpenAI key and create a ```.env``` folder in the root directory of the repo with the following:
+```
+KEY=OPEN AI KEY
+SERVER_PORT=8080
+```
+
+## Client Setup
+This project requires a [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) and [WM8960 Audio Hat](https://www.waveshare.com/wm8960-audio-hat.htm). Run all necessary hardware driver installations.
+
+Run ```pip install -r requirements-client.txt``` to install all necessary packages on the Raspberry Pi.
+
+### USB Mounting Setup
+To enable network configuration via USB flash drive through automatic mounting at startup:
+1. Plug in the USB to the RPI
+2. Create a folder to mount through ```sudo mkdir /mnt/volume```
+3. Set proper permissions with ```sudo chmod 770 /mnt/volume```
+4. Mount the USB drive with ```sudo mount /dev/sda1 /mnt/volume```
+5. Configure your fstab by adding ```/dev/sda1 /mnt/volume ntfs defaults 0 2``` to the end of ```/etc/fstab```
+6. Reboot with ```sudo reboot```
+
+More information on this process can be found [here](https://gist.github.com/etes/aa76a6e9c80579872e5f).
+
+### Running on RPI Startup
+
+Add a call to ```rpi_boot.py``` in ```/etc/rc.local``` to enable running the program on boot.
+
+# Usage
+
+This usage setup assumes you have done the full setup for launching the game on RPI startup.
+
+1. Connect the computer you intend to use to a Network. (Use Hotspot on campus to avoid Eduroam issues)
+2. Find your systems IPv4 address ([Mac](https://www.security.org/vpn/find-mac-ip-address/)) ([Windows](https://support.microsoft.com/en-us/windows/find-your-ip-address-in-windows-f21a9bbc-c582-55cd-35e0-73431160a1b9)) ([Linux](https://phoenixnap.com/kb/how-to-find-ip-address-linux))
+3. Plug in the USB drive and edit the ```network_config.json``` file by setting the WiFi SSID, WiFi password, and IPv4 at the server_ip element
+4. Plug the USB drive into the RPI. The RPI should be OFF right now
+5. Start the server on your local machine through ```python src/game_server.py -ip IPv4_HERE```
+6. Power on the RPI and begin playing.
+
+## Local Debugging
+
+Use the ```-d``` flag to run local debug mode.
+
+If you are running the client code, use ```python src/rpi_boot.py``` to begin testing.
+
+
+# Code Information
 
 The main body of our code is located in the src folder. Below is a brief description of each file:
 
