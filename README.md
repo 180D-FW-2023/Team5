@@ -42,7 +42,7 @@ This usage setup assumes you have done the full setup for launching the game on 
 2. Find your systems IPv4 address ([Mac](https://www.security.org/vpn/find-mac-ip-address/)) ([Windows](https://support.microsoft.com/en-us/windows/find-your-ip-address-in-windows-f21a9bbc-c582-55cd-35e0-73431160a1b9)) ([Linux](https://phoenixnap.com/kb/how-to-find-ip-address-linux))
 3. Plug in the USB drive and edit the ```network_config.json``` file by setting the WiFi SSID, WiFi password, and IPv4 at the server_ip element
 4. Plug the USB drive into the RPI. The RPI should be OFF right now
-5. Make sure your ```.env``` file is set up properly as described in the [server setup](##Server Setup)
+5. Make sure your ```.env``` file is set up properly as described in the [server setup](#server-setup)
 6. Start the server on your local machine through ```python src/game_server.py -ip IPv4_HERE```
 7. Power on the RPI and begin playing.
 
