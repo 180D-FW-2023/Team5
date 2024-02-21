@@ -37,3 +37,15 @@ def read_prompts_json(json_path):
         prompts[key] = val.replace("\n", "")
 
     return prompts
+
+
+def get_first_number(input_string):
+    # Use regular expression to find the first occurrence of a number in the string
+    match = re.search(r'\b\d+\b', input_string)
+    
+    if match:
+        # Extract and return the matched number as an integer
+        return int(match.group())
+    else:
+        # Return None if no number is found in the input string
+        return None

@@ -1,3 +1,5 @@
+
+
 import os
 import sys
 import shutil
@@ -13,11 +15,7 @@ import tcp_file_transfer as tcp
 import play_and_record_audio as am
 from constants import *
 
-sys.path.insert(1, '/home/niklb/Team5/src/imu')
-# os.chdir("./imu")
-# print("current directory:", os.getcwd())
-from imu_handler import ImuHandler
-# os.chdir("..")
+from imu.imu_handler import ImuHandler
 
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
@@ -46,6 +44,7 @@ class GameClient:
         self.tcpc.connect_to_server()
 
         self.imu = ImuHandler()
+        self.imu_enabled = self.imu.imu_enabled
 
 
     def main_loop(self):
@@ -55,6 +54,9 @@ class GameClient:
         imu_round_now = False
 
         while True:
+            if not self.imu_enabled: # disables imu if not enabled already
+                imu_round = False
+
             signal = self.tcpc.receive_signal()
             if signal == Signals.FILE_SENT:
                 received_file_path = self.temp_dir / "received.wav"

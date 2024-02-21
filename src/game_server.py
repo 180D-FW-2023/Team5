@@ -24,22 +24,11 @@ os.chdir(Path(__file__).parent.parent.resolve())
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)
 
-def extract_option_number(input_string):
-    # Use regular expression to find the first occurrence of a number in the string
-    match = re.search(r'\b\d+\b', input_string)
-    
-    if match:
-        # Extract and return the matched number as an integer
-        return int(match.group())
-    else:
-        # Return None if no number is found in the input string
-        return None
-
 #TODO: HANDLE TERMINATIONS
 
 class GameServer:
     def __init__(self,
-                 use_local,
+                 use_local=False,
                  temp_dir_path=TEMP_DIR,
                  prompts_json_path=PROMPTS_JSON_PATH,
                  filtered_words_json_path= FILTERED_WORDS_JSON_PATH,
@@ -240,7 +229,7 @@ class GameServer:
                 # Ask LLM to determine which option the child chose so we have a numerical value [1, 3]
                 option_check_string = llm_res + '\n\n' + prompt + '\n\n' + self.prompts["option_check"]
                 selected_choice = self.llm.prompt_llm_single(prompt=option_check_string)
-                int_selected_choice = extract_option_number(selected_choice)
+                int_selected_choice = h.get_first_number(selected_choice)
 
                 print("**START DEBUG INFO**")
                 if int_selected_choice is None:
@@ -255,7 +244,7 @@ class GameServer:
                 print("**START DEBUG INFO**")
                 failure_check_string = self.prompts["which_option_fails"] + "\n\n" + llm_res
                 failure_option = self.llm.prompt_llm_single(prompt=failure_check_string)
-                int_failure_choice = extract_option_number(failure_option)
+                int_failure_choice = h.get_first_number(failure_option)
                 if int_failure_choice is None:
                     int_failure_choice = 1
                     print("Unable to parse failure option number from:\n" + failure_option)
@@ -291,10 +280,14 @@ def main():
     # use: python game_server.py -d
     parser = argparse.ArgumentParser(description='Game server program for the choose your own adventure game.')
     parser.add_argument('-d', action='store_true', help='Enable local debugging (i.e. do not use client)')
+    parser.add_argument("-ip", type=str, required=True, help="Current IPv4 of server")
+
     args = parser.parse_args()
     local_debug = args.d
+    server_ip = args.ip
 
-    game_server = GameServer(local_debug)
+    game_server = GameServer(server_ip=server_ip, 
+                             use_local=local_debug)
 
     game_server.start_server()
 

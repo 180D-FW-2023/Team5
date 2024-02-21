@@ -189,7 +189,7 @@ class TCPServer(TCPBase):
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def start_server(self):
-        print("start server funciton running")
+        print("start server function running")
         try:
             self.tcp_server_socket.bind((self.server_ip, self.server_port))
             self.tcp_server_socket.listen()
