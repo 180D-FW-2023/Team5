@@ -8,21 +8,47 @@ Use python game_server.py -d to enable local debugging
 
 The main body of our code is located in the src folder. Below is a brief description of each file:
 
-constants.py-
-  This file holds global constants for our main routine. The most essential values are the timing between recording user inputs and the probability of game-ending prompts. 
+```constants.py``` - This file holds global constants for our main routine. The most essential values are the timing between recording user inputs and the probability of game-ending prompts. 
 
-game_client.py
+```game_client.py``` -
   Driver code to run the game on the Raspberry Pi. 
 
-game_server.py
-  Driver code for the game to run on the computer, including calls to the LLM.
+```game_server.py``` -
+   Driver code for the game to run on the computer, including calls to the LLM.
 
-helper.py
+```helper.py``` -
   Includes testing protocols and assists in file loading.
 
-llm_handler.py
-  A file that calls OpenAI and relays prompts to and from ChatGPT
+```llm_handler.py``` -
+  A file that calls OpenAI and relays prompts to and from ChatGPT.
 
-play_and_record_audio.py
+```play_and_record_audio.py``` -
+  Controls our system's microphone and speakers. 
+
+```signals.py``` -
+  Enumeration of critical signals including sending files and ending the game.
+
+```speech_to_text.py``` -
+  Translates user audio to text using vosk and stores it in a JSON file. This file is then processed by the LLM.
+
+  ```tcp_file_transfer.py``` -
+  TCP server and client structure/protocol. 
+
+  ```text_to_speech.py``` -
+  Converts text-file from the API to speech in the toy's voice.
+
+  ```rpi_boot.py``` -
+  Initiates Wi-Fi and the client code on the Raspberry Pi.
+
+  
+  
+  
+
+
+
+  
+
+
+  
   
 
