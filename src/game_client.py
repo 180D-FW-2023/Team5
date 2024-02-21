@@ -1,5 +1,4 @@
-# change to parent directory to standard directories
-os.chdir(Path(__file__).parent.parent.resolve())
+
 
 import os
 import sys
@@ -17,6 +16,9 @@ import play_and_record_audio as am
 from constants import *
 
 from imu.imu_handler import ImuHandler
+
+# change to parent directory to standard directories
+os.chdir(Path(__file__).parent.parent.resolve())
 
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)
@@ -42,6 +44,7 @@ class GameClient:
         self.tcpc.connect_to_server()
 
         self.imu = ImuHandler()
+        self.imu_enabled = self.imu.imu_enabled
 
 
     def main_loop(self):
@@ -51,6 +54,9 @@ class GameClient:
         imu_round_now = False
 
         while True:
+            if not self.imu_enabled: # disables imu if not enabled already
+                imu_round = False
+
             signal = self.tcpc.receive_signal()
             if signal == Signals.FILE_SENT:
                 received_file_path = self.temp_dir / "received.wav"

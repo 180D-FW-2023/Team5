@@ -1,6 +1,3 @@
-# change to parent directory to standard directories
-os.chdir(Path(__file__).parent.parent.resolve())
-
 import random
 from pathlib import Path
 import shutil
@@ -20,6 +17,9 @@ from helper import timeit
 from constants import *
 import sys
 import re
+
+# change to parent directory to standard directories
+os.chdir(Path(__file__).parent.parent.resolve())
 
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)

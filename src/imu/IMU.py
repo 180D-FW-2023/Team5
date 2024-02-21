@@ -1,7 +1,7 @@
 import smbus
 bus = smbus.SMBus(1)
-from LSM6DSL import *
-from LIS3MDL import *
+from imu.LSM6DSL import *
+from imu.LIS3MDL import *
 import time
 
 BerryIMUversion = 99
