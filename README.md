@@ -48,6 +48,30 @@ Simplifies possible outputs from the API to vocabulary appropriate for a child
 ```prompts.json``` -
 Converts user inputs/choices to appropriate responses by sending designated prompts to the API based on previous actions. 
 
+The experiments folder contains various testing files:
+
+```end_to_end_speech_test.py``` - 
+Tests sound card drivers.
+
+```local_speech_test.py``` -
+Tests speech processing on local systems. 
+
+```stream_test.py``` -
+Tests streaming feature from the API.
+
+```tcp_speech_client_test.py``` -
+Tests speech file detection on the client's end.
+
+```tcp_speech_server_test.py``` -
+Tests speech file detection on the server's end.
+
+```whisper_api_stream_test.py```-
+Tests initial call to the API.
+
+
+
+
+
   
   
 
