@@ -28,7 +28,7 @@ load_dotenv(DOTENV_PATH)
 
 class GameServer:
     def __init__(self,
-                 use_local,
+                 use_local=False,
                  temp_dir_path=TEMP_DIR,
                  prompts_json_path=PROMPTS_JSON_PATH,
                  filtered_words_json_path= FILTERED_WORDS_JSON_PATH,
@@ -280,10 +280,14 @@ def main():
     # use: python game_server.py -d
     parser = argparse.ArgumentParser(description='Game server program for the choose your own adventure game.')
     parser.add_argument('-d', action='store_true', help='Enable local debugging (i.e. do not use client)')
+    parser.add_argument("-ip", type=str, required=True, help="Current IPv4 of server")
+
     args = parser.parse_args()
     local_debug = args.d
+    server_ip = args.ip
 
-    game_server = GameServer(local_debug)
+    game_server = GameServer(server_ip=server_ip, 
+                             use_local=local_debug)
 
     game_server.start_server()
 

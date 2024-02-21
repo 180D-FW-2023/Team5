@@ -57,13 +57,8 @@ def configure_wifi(ssid, password, timeout=None):
 def main():
     with open(NETWORK_INIT_FILE_PATH, "r") as f:
         network_config = json.load(f)
-
-    if check_internet_connection():
-        print("Internet is connected.")
-    else:
-        print("Internet is not connected.")
-        
-    configure_wifi(network_config["ssid"], network_config["password"], timeout=15)
+   
+    configure_wifi(network_config["ssid"], network_config["password"], timeout=20)
 
     # TODO: ADD RERUNS OF RUNNING THE CLIENT HERE/LOADING SAVED STATES
     game_client = GameClient(server_ip=network_config["server_ip"],
