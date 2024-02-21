@@ -71,6 +71,33 @@ class LLM:
     def reset_chat_history(self):
         self.chat_history = []
 
+    def prompt_llm_single(self, role="user", prompt=""):
+        """
+        Send a new message to GPT 3.5 Turbo LLM without the context of the game so far. Intended for quick
+        responses so result isn't streamed.
+
+        Parameters:
+        - prompt (str): The next prompt to give. If not given, repeat the chat history
+        - role (str): specific person giving this message. Most likely always on default
+
+        Returns:
+        - full (str): The response from GPT 3.5 Turbo.
+        """
+        if prompt is None:
+            print("NO PROMPT GIVEN")
+            return None
+
+        # Create an OpenAI API request for GPT 3.5 Turbo
+        res = self.client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            stream=False,
+            messages=[{"role": "system", "content": prompt}]
+        )
+        res_role = res.choices[0].message.role
+        res_msg = res.choices[0].message.content
+
+        return res_msg
+
     def prompt_llm(self, role="user", prompt=""):
         """
         Send a new message to GPT 3.5 Turbo LLM including the context of the game so far. Returns a full

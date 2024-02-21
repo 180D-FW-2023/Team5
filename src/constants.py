@@ -1,5 +1,5 @@
 #Sets the record time (in seconds) when the RPI listens to the child
-RECORD_TIME = 2.5
+RECORD_TIME = 3
 
 # sets the time in seconds to wait between playing and recording
 AUDIO_SWITCH_DELAY = 3
@@ -14,8 +14,13 @@ PROMPT_DELIMITERS =  ["?", "!", ".", ";"]
 
 # recording settings
 CHANNELS = 2 # Adjust to your number of channels
-RATE = 44100 # Sample Rate
+RATE = 48000 # Sample Rate
 CHUNK = 1024 # Block Size
 
 # game logic
 ENDING_STRING = "for playing" # chat gpt phrase that signals end
+INIT_ENDING_PROBABILISTIC_FACTOR = 10 #Sets the probability that a given situation will have actions that result in probabilistic game ending
+# ^ This is the deminator in the probability where the numerator is always 1. i.e. setting this to 5 results in a 20% probability
+# Note that this will decrease over time so that the probability of a random round increases over time
+FAILURE_FACTOR = 1 #Same idea as previous constant except this controls the probability of failure itself
+NUM_SAFE_ROUNDS = 0 #Sets the number of rounds at the beginning where there is 0 probability of a potentially game ending round

@@ -14,12 +14,25 @@ from signals import Signals
 import helper as h
 from helper import timeit
 from constants import *
+import sys
+import re
 
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
 
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)
+
+def extract_option_number(input_string):
+    # Use regular expression to find the first occurrence of a number in the string
+    match = re.search(r'\b\d+\b', input_string)
+    
+    if match:
+        # Extract and return the matched number as an integer
+        return int(match.group())
+    else:
+        # Return None if no number is found in the input string
+        return None
 
 #TODO: HANDLE TERMINATIONS
 
@@ -45,7 +58,10 @@ class GameServer:
         # init LLM handler
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
+        self.ending_prob_fact = INIT_ENDING_PROBABILISTIC_FACTOR
+
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
+        self.imu_round = False     # determines whether current round will use IMU data rather than speech recognition
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
         print("-----------------------------------------------")
         print("\n\n\tGame Initialization Complete\n\n")
@@ -70,8 +86,11 @@ class GameServer:
         chunks = []
         role = None
 
-        # first signal indicated the start of a streamed message
+        # For IMU round, send IMU_ROUND signal first
+        if self.imu_round:
+            self.tcps.send_signal(Signals.IMU_ROUND)
 
+        # Otherwise, first signal indicates the start of a streamed message
         if not self.use_local:
             self.tcps.send_signal(Signals.INIT_FT_STREAMED)
         first_message = True
@@ -113,12 +132,12 @@ class GameServer:
 
         llm_res = self.convert_and_send_llm_response()
 
-        client_res = self.get_client_response()
+        sig, client_res = self.get_client_response()
 
         # locks and continuously asks for a new response
         while client_res is None and force_response:
-            self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?")
-            client_res = self.get_client_response()
+            self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?", 0)
+            sig, client_res = self.get_client_response()
 
         return client_res
 
@@ -146,56 +165,120 @@ class GameServer:
                 print(f"[CHUNK {chunk_num}] {audio_text}")
 
     def get_client_response(self):
+        print("Waiting for client response")
         # get a client wav message and process
         if not self.use_local:
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
-            self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT])
-            client_wav_path = self.tcps.receive_file(client_wav_path)
-            client_res = timeit(sp.recognize_wav)(client_wav_path)
+            received_signal = self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT,
+                                                                         Signals.IMU_TURN_LEFT,
+                                                                         Signals.IMU_TURN_RIGHT])
+            if received_signal == Signals.FILE_SENT: # received an audio file
+                client_wav_path = self.tcps.receive_file(client_wav_path)
+                client_res = timeit(sp.recognize_wav)(client_wav_path)
+                print(f"You said: {client_res}")
 
-            print(f"You said: {client_res}")
-        else: # local mode that just takes a user input
+            # imu signals
+            elif received_signal == Signals.IMU_TURN_LEFT:
+                client_res = self.prompts["IMU_turn_left"]
+            elif received_signal == Signals.IMU_TURN_RIGHT:
+                client_res = self.prompts["IMU_turn_right"]
+            # handling imu signals
+        else: # local mode that just takes a user input for text
+            received_signal = Signals.FILE_SENT
             client_res = input("--------> You respond: ")
             print("-----------------------------------------------")
 
-        return client_res
+        return received_signal, client_res
+
+
+    def update_ending_prob_factor(self):
+        if self.ending_prob_fact >= 4: # sets the highest probability of 
+            self.ending_prob_fact -= 1
 
     def main_loop(self, initial_prompt):
         prompt = initial_prompt
-
+        round_num = 0 # round 0 is the first round that a story decision is presented to the child
         # Variables for the game logic
-        random_round_next_round = False
-        random_round = False
+        enforce_game_enders = False
         while True:
+            #Determine if this situation will have a game ending choice probabilistically
+            # (PROBABILISTIC_FACTOR)^(-1)% chance of a potentially game ending round
+            #if round_num >= NUM_SAFE_ROUNDS and random.randint(1,1) == 1:
+            if round_num == 3:
+                print("----------This round will have potential game enders---------")
+                self.llm.add_chat_history("system", self.prompts["next_round_random"])
+                enforce_game_enders = True
+            else:
+                enforce_game_enders = False
+            # 33% chance of IMU round
+            if (not enforce_game_enders) and (random.randint(1,1) == 0 and prompt != initial_prompt):
+                self.imu_round = True
+                # Add chat history to affect the next LLM response
+                self.llm.add_chat_history("system", self.prompts["this_round_imu"])
+
             self.llm.prompt_llm(prompt=prompt)
             llm_res = self.convert_and_send_llm_response()
+
+            #TODO clean this up
             if "for playing" in llm_res:
                 print("Game is over!")
                 # send termination signal here
+                self.tcps.send_signal(Signals.GAME_END)
                 break
 
-            prompt = self.get_client_response()
+            self.imu_round = False
 
-        if random_round_next_round:
-            random_round = True
-            random_round_next_round = False
+            sig, prompt = self.get_client_response()
+            print("Got client response")
 
-        # 10% chance of a potentially game ending round
-        if random.randint(1,10) == 1:
-            print("It's random time")
-            self.llm.add_chat_history("system", self.prompts["next_round_random"])
-            random_round_next_round = True
+            # If we are in a game ending probabilistic round, handle cases when the child chooses a failure option intelligently
+            # Note that we create separate LLM API calls to determine option choice and failure option. Empirically, the additional delay is negligible.
+            if enforce_game_enders:
 
-        # If this is a random round, we use randomness to determine if the child keeps playing or not
-        if random_round and random.randint(1,3) == 2:
-            print("FAILURE. Ending Game")
-            self.llm.add_chat_history("system", self.prompts["failure"])
-            random_round = False
-            self.tcps.send_signal(Signals.GAME_END)
-        else:
-            random_round_next_round = False
-            random_round = False
+                # Ask LLM to determine which option the child chose so we have a numerical value [1, 3]
+                option_check_string = llm_res + '\n\n' + prompt + '\n\n' + self.prompts["option_check"]
+                selected_choice = self.llm.prompt_llm_single(prompt=option_check_string)
+                int_selected_choice = extract_option_number(selected_choice)
+
+                print("**START DEBUG INFO**")
+                if int_selected_choice is None:
+                    int_selected_choice = 1
+                    print("Unable to parse selection option number from:\n" + selected_choice)
+                else:
+                    print(f"Selected option number: {int_selected_choice} from: \"{selected_choice}\"")
+                print("**END DEBUG INFO**")
+                
+
+                # Ask LLM to determine which option is most likely to end in failure so we have a numerical value [1, 3]
+                print("**START DEBUG INFO**")
+                failure_check_string = self.prompts["which_option_fails"] + "\n\n" + llm_res
+                failure_option = self.llm.prompt_llm_single(prompt=failure_check_string)
+                int_failure_choice = extract_option_number(failure_option)
+                if int_failure_choice is None:
+                    int_failure_choice = 1
+                    print("Unable to parse failure option number from:\n" + failure_option)
+                else:
+                    print(f"Failure option number: {int_failure_choice} from: \"{failure_option}\"")
+                print("**END DEBUG INFO**")
+                
+
+                # If the child selected the game ending option
+                if True:
+                    print("FAILURE. Ending Game")
+                    if self.use_local:
+                        sys.exit()
+                    else:
+                        self.llm.add_chat_history("system", self.prompts["failure"])
+                        self.llm.prompt_llm(prompt=prompt)
+                        llm_res = self.convert_and_send_llm_response()
+                        self.tcps.send_signal(Signals.GAME_END)
+
+
+            if round_num >= 2:
+                self.update_ending_prob_factor()
+
+            round_num += 1
 
     def __del__(self):
         if self.remove_temp:
