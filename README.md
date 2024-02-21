@@ -12,6 +12,7 @@ Get your OpenAI key and create a ```.env``` folder in the root directory of the 
 ```
 KEY=OPEN AI KEY
 SERVER_PORT=8080
+SERVER_IP=0.0.0.0
 ```
 
 ## Client Setup
