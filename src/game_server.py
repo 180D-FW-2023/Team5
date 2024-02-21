@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 import time
 import argparse
+
 from llm_handler import LLM
 import speech_to_text as sp
 import text_to_speech as tba
@@ -220,7 +221,6 @@ def main():
     # use: python game_server.py -d
     parser = argparse.ArgumentParser(description='Game server program for the choose your own adventure game.')
     parser.add_argument('-d', action='store_true', help='Enable local debugging (i.e. do not use client)')
-
     args = parser.parse_args()
     local_debug = args.d
 

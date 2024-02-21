@@ -2,8 +2,7 @@
 import subprocess
 import json
 
-
-
+from game_client import GameClient
 from constants import *
 def check_internet_connection():
     try:
@@ -36,18 +35,23 @@ def configure_wifi(ssid, password):
     subprocess.run(["sudo", "cp", "temp_supplicant.conf", "/etc/wpa_supplicant/wpa_supplicant.conf"])
     subprocess.run(["sudo", "wpa_cli", "-i",  "wlan0", "reconfigure"])
 
+    subprocess.run(["sudo", "rm", "temp_supplicant.confg"])
+
 def main():
+    with open(NETWORK_INIT_FILE_PATH, "r") as f:
+        network_config = json.load(f)
+
     if check_internet_connection():
         print("Internet is connected.")
     else:
         print("Internet is not connected.")
-    
-        with open(NETWORK_INIT_FILE_PATH, "r") as f:
-            network_config = json.load(f)
-
+        
         configure_wifi(network_config["ssid"], network_config["password"])
 
     # TODO: ADD RERUNS OF RUNNING THE CLIENT HERE/LOADING SAVED STATES
+    game_client = GameClient(server_ip=network_config["server_ip"],
+                             server_port=network_config["server_port"])
+    game_client.main_loop()
 
 
 if __name__ == "__main__":
