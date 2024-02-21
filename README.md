@@ -21,12 +21,12 @@ Run ```pip install -r requirements-client.txt``` to install all necessary packag
 
 ### USB Mounting Setup
 To enable network configuration via USB flash drive through automatic mounting at startup:
-1. Plug in the USB to the RPI
-2. Create a folder to mount through ```sudo mkdir /mnt/volume```
-3. Set proper permissions with ```sudo chmod 770 /mnt/volume```
-4. Mount the USB drive with ```sudo mount /dev/sda1 /mnt/volume```
-5. Configure your fstab by adding ```/dev/sda1 /mnt/volume ntfs defaults 0 2``` to the end of ```/etc/fstab```
-6. Reboot with ```sudo reboot```
+1. Plug in the USB to the RPI.
+2. Create a folder to mount through ```sudo mkdir /mnt/volume```.
+3. Set proper permissions with ```sudo chmod 770 /mnt/volume```.
+4. Mount the USB drive with ```sudo mount /dev/sda1 /mnt/volume```.
+5. Configure your fstab by adding ```/dev/sda1 /mnt/volume ntfs defaults 0 2``` to the end of ```/etc/fstab```.
+6. Reboot with ```sudo reboot```.
 
 More information on this process can be found [here](https://gist.github.com/etes/aa76a6e9c80579872e5f).
 
@@ -38,13 +38,13 @@ Add a call to ```rpi_boot.py``` in ```/etc/rc.local``` to enable running the pro
 
 This usage setup assumes you have done the full setup for launching the game on RPI startup.
 
-1. Connect the computer you intend to use to a Network. (Use Hotspot on campus to avoid Eduroam issues)
-2. Find your systems IPv4 address ([Mac](https://www.security.org/vpn/find-mac-ip-address/)) ([Windows](https://support.microsoft.com/en-us/windows/find-your-ip-address-in-windows-f21a9bbc-c582-55cd-35e0-73431160a1b9)) ([Linux](https://phoenixnap.com/kb/how-to-find-ip-address-linux))
-3. Plug in the USB drive and edit the ```network_config.json``` file by setting the WiFi SSID, WiFi password, and IPv4 at the server_ip element
-4. Plug the USB drive into the RPI. The RPI should be OFF right now
-5. Make sure your ```.env``` file is set up properly as described in the [server setup](#server-setup)
-6. Start the server on your local machine through ```python src/game_server.py -ip IPv4_HERE```
-7. Power on the RPI and begin playing.
+1. Connect the computer you intend to use to a Network. (Use Hotspot on campus to avoid Eduroam issues).
+2. Find your systems IPv4 address ([Mac](https://www.security.org/vpn/find-mac-ip-address/)) ([Windows](https://support.microsoft.com/en-us/windows/find-your-ip-address-in-windows-f21a9bbc-c582-55cd-35e0-73431160a1b9)) ([Linux](https://phoenixnap.com/kb/how-to-find-ip-address-linux)).
+3. Plug in the USB drive and edit the ```network_config.json``` file by setting the WiFi SSID, WiFi password, and IPv4 at the server_ip element.
+4. Plug the USB drive into the RPI. The RPI should be OFF right now.
+5. Make sure your ```.env``` file is set up properly as described in the [server setup](#server-setup).
+6. Start the server on your local machine through ```python src/game_server.py -ip IPv4_HERE```.
+7. Power on the RPI and begin playing. There may be a bit of a delay as the RPI startups.
 
 ## Local Debugging
 
