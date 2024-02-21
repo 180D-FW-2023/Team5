@@ -1,4 +1,4 @@
-NETWORK_INIT_FILE_PATH = "temp.json"
+NETWORK_INIT_FILE_PATH = "network/network_config.json"
 
 #Sets the record time (in seconds) when the RPI listens to the child
 RECORD_TIME = 5

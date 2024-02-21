@@ -2,6 +2,8 @@
 import subprocess
 import json
 
+
+
 from constants import *
 def check_internet_connection():
     try:
@@ -11,34 +13,35 @@ def check_internet_connection():
         return False
 
 def configure_wifi(ssid, password):
-    config_lines = [
-        'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev',
-        'update_config=1',
-        'country=US',
-        '\n',
-        'network={',
-        '\tssid="{}"'.format(ssid),
-        '\tpsk="{}"'.format(password),
-        '}'
-        ]
-    config = '\n'.join(config_lines)
+    wpa_supplicant_text = f"""
+    ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+    update_config=1
+    country=US
 
-    #give access and writing. may have to do this manually beforehand
-    subprocess.run(["sudo", "chmod", "a+w", "/etc/wpa_supplicant/wpa_supplicant.conf"])
+    network={{
+        ssid="{ssid}"
+        psk="{password}"
+        scan_ssid=1
+    }}
+    """
 
     #writing to file
-    with open("/etc/wpa_supplicant/wpa_supplicant.conf", "w") as wifi:
-        wifi.write(config)
+    with open("temp_supplicant.conf", "w") as f:
+        f.write(wpa_supplicant_text)
+    #give access and writing. may have to do this manually beforehand
+    subprocess.run(["sudo", "chmod", "a+w", "temp_supplicant.conf"])
 
     print("Wifi config added. Refreshing configs")
-    ## refresh configs
-    subprocess.run(["sudo", "wpa_cli", "-i wlan0", "reconfigure"])
+    # refresh configs
+    subprocess.run(["sudo", "cp", "temp_supplicant.conf", "/etc/wpa_supplicant/wpa_supplicant.conf"])
+    subprocess.run(["sudo", "wpa_cli", "-i",  "wlan0", "reconfigure"])
 
 def main():
     if check_internet_connection():
         print("Internet is connected.")
     else:
         print("Internet is not connected.")
+    
         with open(NETWORK_INIT_FILE_PATH, "r") as f:
             network_config = json.load(f)
 
