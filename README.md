@@ -69,7 +69,9 @@ Tests speech file detection on the server's end.
 Tests initial call to the API.
 
 
+The IMU folder contains the software backend for the implementation of kinematic controls, though we still have not been able to integrate the hardware.
 
+The necessary packages for our system are located in ```requirements-client.txt``` and ```requirements-server.txt```.
 
 
   
