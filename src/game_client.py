@@ -1,3 +1,6 @@
+# change to parent directory to standard directories
+os.chdir(Path(__file__).parent.parent.resolve())
+
 import os
 import sys
 import shutil
@@ -13,14 +16,7 @@ import tcp_file_transfer as tcp
 import play_and_record_audio as am
 from constants import *
 
-sys.path.insert(1, '/home/niklb/Team5/src/imu')
-# os.chdir("./imu")
-# print("current directory:", os.getcwd())
-from imu_handler import ImuHandler
-# os.chdir("..")
-
-# change to parent directory to standard directories
-os.chdir(Path(__file__).parent.parent.resolve())
+from imu.imu_handler import ImuHandler
 
 # Maunally load environment variables from the .env file
 load_dotenv(DOTENV_PATH)

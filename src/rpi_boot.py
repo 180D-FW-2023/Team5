@@ -1,9 +1,13 @@
+# change to parent directory to standard directories
+os.chdir(Path(__file__).parent.parent.resolve())
+
 # file to handle all the boot configurations on an rpi
 import subprocess
 import json
 
 from game_client import GameClient
 from constants import *
+
 def check_internet_connection():
     try:
         subprocess.check_output(["ping", "-c", "1", "8.8.8.8"])
