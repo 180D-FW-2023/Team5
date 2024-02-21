@@ -40,7 +40,14 @@ The main body of our code is located in the src folder. Below is a brief descrip
   ```rpi_boot.py``` -
   Initiates Wi-Fi and the client code on the Raspberry Pi.
 
-  
+The data folder contains code for the configuration of our game:
+
+```filtered_words.json``` -
+Simplifies possible outputs from the API to vocabulary appropriate for a child
+
+```prompts.json``` -
+Converts user inputs/choices to appropriate responses by sending designated prompts to the API based on previous actions. 
+
   
   
 
