@@ -8,7 +8,7 @@ Teddy bear with IOT-enabled speaker to play interactive choose-your-own-adventur
 ## Server Setup
 Run ```pip install -r requirements-server.txt``` to install all necessary packages on the local server.
 
-Get your OpenAI key and create a ```.env``` folder in the root directory of the repo with the following:
+Get your OpenAI key and create a ```.env``` file in the root directory of the repo with the following:
 ```
 KEY=OPEN AI KEY
 SERVER_PORT=8080
