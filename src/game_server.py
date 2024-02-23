@@ -48,8 +48,10 @@ class GameServer:
         # init LLM handler
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
+
         self.ending_prob_fact = INIT_ENDING_PROBABILISTIC_FACTOR
 
+        self.start_time = 0
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
         self.imu_round = False     # determines whether current round will use IMU data rather than speech recognition
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
@@ -206,7 +208,7 @@ class GameServer:
                 self.imu_round = True
                 # Add chat history to affect the next LLM response
                 self.llm.add_chat_history("system", self.prompts["this_round_imu"])
-
+                
             self.llm.prompt_llm(prompt=prompt)
             llm_res = self.convert_and_send_llm_response()
 

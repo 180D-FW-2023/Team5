@@ -52,6 +52,8 @@ class GameClient:
 
         imu_round = False
         imu_round_now = False
+        start_time = 0
+        first_signal = True
 
         while True:
             if not self.imu_enabled: # disables imu if not enabled already
@@ -59,6 +61,7 @@ class GameClient:
 
             signal = self.tcpc.receive_signal()
             if signal == Signals.FILE_SENT:
+            
                 received_file_path = self.temp_dir / "received.wav"
 
                 received_file_path = self.tcpc.receive_file(received_file_path)
@@ -90,19 +93,24 @@ class GameClient:
                 raise NotImplementedError(f"Signal {Signals(signal).name} is not implemented")
 
             if imu_round_now:
+                imu_thread = threading.Thread(target=self.imu.collect_imu_data, daemon=True)
+                imu_thread.start()
                 print("IMU round. ")
-                if self.imu.collect_imu_data() == False:
+                if self.imu.res_queue.get(timeout=5) == False:
                     print("\nleft left left left\n")
                     self.tcpc.send_signal(Signals.IMU_TURN_LEFT)
                 else:
                     print("\nright right right right\n")
                     self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
+                imu_thread.join()
                 imu_round_now = False
             else:
                 record_file_path = self.temp_dir / "recorded.wav"
                 #time.sleep(AUDIO_SWITCH_DELAY)
                 record_file_path = am.record_audio_by_time(record_file_path, subprocess_mode=self.subprocess_mode)
                 self.tcpc.send_file(record_file_path)
+                start_time = time.time()
+                print(f"\nJust sent server file; starting time: {start_time}\n")
 
                 os.remove(record_file_path)
 

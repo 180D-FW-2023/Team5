@@ -2,6 +2,8 @@ import socket
 import os
 import struct
 
+import time
+
 from abc import ABC, abstractmethod
 
 from dotenv import load_dotenv
@@ -150,12 +152,18 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         # sentinel is none
         save_dir.mkdir(exist_ok=True) # makes sure the save dir exists
         i = 0
+        first_file = True
         while True:
             signal = self.receive_signal(expected_signals=[Signals.FILE_SENT, Signals.END_FT_STREAMED])
             if signal == Signals.END_FT_STREAMED:
+                first_file = True # reset
                 output_queue.put(None, timeout=10) # sentinel
                 break
             received_file_path = self.receive_file(save_dir / f"{file_name_tag}_{i}{ext}")
+            if first_file:
+                end_time = time.time()
+                print(f"\nJust received first file; ending time: {end_time}\n")
+                first_file = False
             output_queue.put(received_file_path, timeout=10)
             i += 1
 

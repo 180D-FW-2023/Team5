@@ -1,7 +1,8 @@
 import sys
 import time
 import math
-import imu.IMU as i
+import IMU as i
+from queue import Queue
 
 RAD_TO_DEG = 57.29578
 M_PI = 3.14159265358979323846
@@ -20,13 +21,18 @@ class ImuHandler:
         self.magZmax = -564
 
         self.imu_enabled = True
+        self.res_queue = Queue()
 
+        # FIXME: Uncomment to use IMU
         i.detectIMU()     # Detect if BerryIMU is connected.
         if(i.BerryIMUversion == 99):
             print(" No BerryIMU found... exiting ")
             self.imu_enabled = False
         i.initIMU()       # Initialise the accelerometer, gyroscope and compass
 
+    def collect_imu_data_wrapper(self):
+        result = self.collect_imu_data()
+        self.res_queue.put(result)
 
     def collect_imu_data(self):
         if self.imu_enabled == False:
@@ -108,7 +114,9 @@ class ImuHandler:
             return False
         return None
 
-
+if __name__ == '__main__':
+    myimu = ImuHandler()
+    myimu.collect_imu_data()
             
 
 # def collect_imu_data(self):
