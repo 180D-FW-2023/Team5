@@ -16,7 +16,6 @@ import helper as h
 from helper import timeit
 from constants import *
 import sys
-import re
 
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
@@ -46,9 +45,10 @@ class GameServer:
         self.tcps = tcp.TCPServer(server_ip, server_port)
 
         # init LLM handler
+        print(os.getenv("KEY"))
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
-        self.ending_prob_fact = INIT_ENDING_PROBABILISTIC_FACTOR
+        self.ending_prob_fact = ENDING_PROBABILISTIC_FACTOR
 
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
         self.imu_round = False     # determines whether current round will use IMU data rather than speech recognition
@@ -60,7 +60,6 @@ class GameServer:
     def start_server(self):
         if not self.use_local:
             self.tcps.start_server() # blocks until a client connects
-
 
     def init_game(self):
         # getting the players name
@@ -83,6 +82,7 @@ class GameServer:
         # Otherwise, first signal indicates the start of a streamed message
         if not self.use_local:
             self.tcps.send_signal(Signals.INIT_FT_STREAMED)
+
         first_message = True
         chunk_num = 0 # enumerate the chunks in each stream response
         start = time.time()
@@ -181,33 +181,48 @@ class GameServer:
 
         return received_signal, client_res
 
-
     def update_ending_prob_factor(self):
         if self.ending_prob_fact >= 4: # sets the highest probability of 
             self.ending_prob_fact -= 1
 
     def main_loop(self, initial_prompt):
+
         prompt = initial_prompt
-        round_num = 0 # round 0 is the first round that a story decision is presented to the child
+        round_num = 1 # round 1 is the first round that a story decision is presented to the child
+
         # Variables for the game logic
         enforce_game_enders = False
+
+        # Game loop
         while True:
+
+            #The next two sections determine, probabilistically, the type of round that is about to occur (game ender, IMU, regular)
+
             #Determine if this situation will have a game ending choice probabilistically
             # (PROBABILISTIC_FACTOR)^(-1)% chance of a potentially game ending round
-            #if round_num >= NUM_SAFE_ROUNDS and random.randint(1,1) == 1:
-            if round_num == 3:
+            if round_num > NUM_SAFE_ROUNDS and random.randint(1, ENDING_PROBABILISTIC_FACTOR) == 1:
                 print("----------This round will have potential game enders---------")
                 self.llm.add_chat_history("system", self.prompts["next_round_random"])
                 enforce_game_enders = True
             else:
                 enforce_game_enders = False
-            # 33% chance of IMU round
-            if (not enforce_game_enders) and (random.randint(1,1) == 0 and prompt != initial_prompt):
+            
+
+            #Determine if this situation will require IMU input instead of voice input probabilistically
+            #Note: if we already determined that this round will have potential game enders, we don't also make it an IMU round
+            #We also only allow IMU rounds AFTER the first scenario so that the first input will be voice based
+            if (not enforce_game_enders) and (round_num >= 1) and (random.randint(1, IMU_PROBABILISTIC_FACTOR) == 1):
                 self.imu_round = True
                 # Add chat history to affect the next LLM response
                 self.llm.add_chat_history("system", self.prompts["this_round_imu"])
 
+
+            #Now that we know what type of round we will have, send the round type information and previous user input to the LLM
+
+            #Add the current information to the LLM prompting queue to be handled by the LLM handler thread
             self.llm.prompt_llm(prompt=prompt)
+
+            #Since the LLM response is stored in a queue, this function is called to continuously pop the queue, process the resulting text, and send it to the client
             llm_res = self.convert_and_send_llm_response()
 
             #TODO clean this up
