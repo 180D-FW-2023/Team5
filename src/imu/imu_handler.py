@@ -1,8 +1,8 @@
 import sys
 import time
 import math
-import IMU as i
-from queue import Queue
+import imu.IMU as i
+# from queue import Queue
 
 RAD_TO_DEG = 57.29578
 M_PI = 3.14159265358979323846
@@ -21,18 +21,18 @@ class ImuHandler:
         self.magZmax = -564
 
         self.imu_enabled = True
-        self.res_queue = Queue()
+        # self.res_queue = Queue()
 
-        # FIXME: Uncomment to use IMU
+        # Comment out to not use IMU
         i.detectIMU()     # Detect if BerryIMU is connected.
         if(i.BerryIMUversion == 99):
             print(" No BerryIMU found... exiting ")
             self.imu_enabled = False
         i.initIMU()       # Initialise the accelerometer, gyroscope and compass
 
-    def collect_imu_data_wrapper(self):
-        result = self.collect_imu_data()
-        self.res_queue.put(result)
+    # def collect_imu_data_wrapper(self):
+    #     result = self.collect_imu_data()
+    #     self.res_queue.put(result)
 
     def collect_imu_data(self):
         if self.imu_enabled == False:
@@ -106,10 +106,10 @@ class ImuHandler:
         print("First Y angle: %5.2f \nLast Y angle: %5.2f" % (first_CFangleY,CFangleY)) 
         avg_ending_angle = SumCFangleY / 10.0
         print("Average Ending angle: %5.2f" % (avg_ending_angle))
-        if avg_ending_angle - first_CFangleY > 50:
+        if avg_ending_angle - first_CFangleY > 35:
             print("Right turn detected")
             return True
-        elif first_CFangleY - avg_ending_angle > 50:
+        elif first_CFangleY - avg_ending_angle > 35:
             print("Left turn detected")
             return False
         return None

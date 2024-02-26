@@ -30,7 +30,8 @@ class GameClient:
                  server_port=os.getenv("SERVER_PORT"),
                  record_time=RECORD_TIME,
                  remove_temp=True,
-                 subprocess_mode=True):
+                 subprocess_mode=True,
+                 imu_use_threading = False):
         self.temp_dir = h.init_temp_storage(temp_dir_path)
 
         self.remove_temp = remove_temp
@@ -39,10 +40,13 @@ class GameClient:
 
         self.subprocess_mode = subprocess_mode # uses subprocessing to call alsaaudio for audio calls
 
+        self.imu_use_threading = imu_use_threading
+
         #  client setup
         self.tcpc = tcp.TCPClient(server_ip, server_port) # connects to server in init
         self.tcpc.connect_to_server()
 
+        #  imu setup
         self.imu = ImuHandler()
         self.imu_enabled = self.imu.imu_enabled
 
@@ -69,6 +73,12 @@ class GameClient:
                     break
                 am.play_audio(received_file_path)
                 os.remove(received_file_path)
+
+                if imu_round:
+                    print("retrying imu now")
+                    imu_round_now = True
+                    imu_round = False
+
             elif signal == Signals.INIT_FT_STREAMED:
                 # separate thread for audio playback
                 audio_playback_thread = threading.Thread(target=am.play_audio_stream,
@@ -93,16 +103,30 @@ class GameClient:
                 raise NotImplementedError(f"Signal {Signals(signal).name} is not implemented")
 
             if imu_round_now:
-                imu_thread = threading.Thread(target=self.imu.collect_imu_data, daemon=True)
-                imu_thread.start()
                 print("IMU round. ")
-                if self.imu.res_queue.get(timeout=5) == False:
-                    print("\nleft left left left\n")
-                    self.tcpc.send_signal(Signals.IMU_TURN_LEFT)
+                if self.imu_use_threading:
+                    imu_thread = threading.Thread(target=self.imu.collect_imu_data_wrapper, daemon=True)
+                    imu_thread.start()
+                    if self.imu.res_queue.get(timeout=5) == False:
+                        print("\nleft left left left\n")
+                        self.tcpc.send_signal(Signals.IMU_TURN_LEFT)
+                    else:
+                        print("\nright right right right\n")
+                        self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
+                    imu_thread.join()
                 else:
-                    print("\nright right right right\n")
-                    self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
-                imu_thread.join()
+                    imu_res = self.imu.collect_imu_data()
+                    if imu_res == False:
+                        print("\nleft left left left\n")
+                        self.tcpc.send_signal(Signals.IMU_TURN_LEFT)
+                    elif imu_res == True:
+                        print("\nright right right right\n")
+                        self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
+                    # Return value was None
+                    else:
+                        print("\nno turn detected\n")
+                        self.tcpc.send_signal(Signals.IMU_NO_TURN)
+
                 imu_round_now = False
             else:
                 record_file_path = self.temp_dir / "recorded.wav"

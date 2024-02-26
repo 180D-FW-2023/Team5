@@ -41,7 +41,7 @@ def record_audio_by_time_subprocess(output_file_path, record_time=RECORD_TIME):
     with audio_lock:
         print("Got the lock")
         #cmd = "arecord -D hw:3,0 -f S16_LE -c2 -r " + str(RATE) + " " + output_file_path
-        cmd = ["arecord", "-f", "dat", "-D", "hw:3,0", output_file_path]
+        cmd = ["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r", "44100", "-c1", output_file_path]
         try:
             # Run the command in the background
             process = subprocess.Popen(cmd)
@@ -117,7 +117,7 @@ def record_audio_by_time(output_file_path, record_time=RECORD_TIME, subprocess_m
         return record_audio_by_time_non_subprocess(output_file_path, record_time=record_time)
 
 def play_audio_with_lock(path):
-    cmd = ["aplay", "-D", "hw:3,0", "-f", "S16_LE", "-c2", path]
+    cmd = ["aplay", "-D", "hw:0,0", "-f", "S16_LE", "-c2", path]
     # Run the command in the background
     process = subprocess.Popen(cmd)
     process.wait()

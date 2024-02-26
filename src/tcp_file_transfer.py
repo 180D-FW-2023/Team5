@@ -91,6 +91,12 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
     def send_file(self, file_path):
         file_path = str(file_path) # for pathlib
 
+        directory_path = os.path.dirname(file_path)
+        contents = os.listdir(directory_path)
+        print("Contents of directory:", directory_path)
+        for item in contents:
+            print(item)
+
         self.send_signal(Signals.FILE_SENT)
         try:
             # Send the file size
@@ -181,6 +187,7 @@ class TCPClient(TCPBase):
 
     def connect_to_server(self):
         try:
+            print(str(self.server_ip), str(self.server_port))
             self.tcp_client_socket.connect((self.server_ip, self.server_port))
             print(f"Connected to server at {self.server_ip}:{self.server_port}")
         except Exception as e:

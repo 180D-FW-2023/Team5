@@ -48,12 +48,12 @@ class GameServer:
         # init LLM handler
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
-
         self.ending_prob_fact = INIT_ENDING_PROBABILISTIC_FACTOR
 
         self.start_time = 0
         self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
         self.imu_round = False     # determines whether current round will use IMU data rather than speech recognition
+        self.retry_imu = False     # flag if no motion was detected during imu round, in which case we must retry
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
         print("-----------------------------------------------")
         print("\n\n\tGame Initialization Complete\n\n")
@@ -164,7 +164,8 @@ class GameServer:
             client_wav_path = self.temp_dir / "client_res.wav"
             received_signal = self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT,
                                                                          Signals.IMU_TURN_LEFT,
-                                                                         Signals.IMU_TURN_RIGHT])
+                                                                         Signals.IMU_TURN_RIGHT,
+                                                                         Signals.IMU_NO_TURN])
             if received_signal == Signals.FILE_SENT: # received an audio file
                 client_wav_path = self.tcps.receive_file(client_wav_path)
                 client_res = timeit(sp.recognize_wav)(client_wav_path)
@@ -172,9 +173,14 @@ class GameServer:
 
             # imu signals
             elif received_signal == Signals.IMU_TURN_LEFT:
+                self.retry_imu = False
                 client_res = self.prompts["IMU_turn_left"]
             elif received_signal == Signals.IMU_TURN_RIGHT:
+                self.retry_imu = False
                 client_res = self.prompts["IMU_turn_right"]
+            elif received_signal == Signals.IMU_NO_TURN:
+                self.retry_imu = True
+                client_res = ""
             # handling imu signals
         else: # local mode that just takes a user input for text
             received_signal = Signals.FILE_SENT
@@ -203,12 +209,14 @@ class GameServer:
                 enforce_game_enders = True
             else:
                 enforce_game_enders = False
-            # 33% chance of IMU round
-            if (not enforce_game_enders) and (random.randint(1,1) == 0 and prompt != initial_prompt):
-                self.imu_round = True
-                # Add chat history to affect the next LLM response
-                self.llm.add_chat_history("system", self.prompts["this_round_imu"])
-                
+
+                # 33% chance of IMU round
+                if (not enforce_game_enders) and (random.randint(1,1) == 1 and prompt != initial_prompt):
+                    self.imu_round = True
+                    # Add chat history to affect the next LLM response
+                    self.llm.add_chat_history("system", self.prompts["this_round_imu"])
+            
+
             self.llm.prompt_llm(prompt=prompt)
             llm_res = self.convert_and_send_llm_response()
 
@@ -223,6 +231,14 @@ class GameServer:
 
             sig, prompt = self.get_client_response()
             print("Got client response")
+
+            # Retry getting IMU data until left/right turn detected
+            while self.retry_imu:
+                # Send text to speech to client
+                self.tcps.send_signal(Signals.IMU_ROUND)
+                self.convert_tts_and_send_client("Sorry, I didn't detect any motion. Try turning the toy to the left or the right", chunk_num=0)
+                sig, prompt = self.get_client_response()
+                print("Got client response")
 
             # If we are in a game ending probabilistic round, handle cases when the child chooses a failure option intelligently
             # Note that we create separate LLM API calls to determine option choice and failure option. Empirically, the additional delay is negligible.
@@ -266,7 +282,7 @@ class GameServer:
                         llm_res = self.convert_and_send_llm_response()
                         self.tcps.send_signal(Signals.GAME_END)
 
-
+        
             if round_num >= 2:
                 self.update_ending_prob_factor()
 
