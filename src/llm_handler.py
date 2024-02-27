@@ -1,6 +1,6 @@
-import string
 import queue
 import threading
+import json
 
 from openai import OpenAI
 
@@ -42,7 +42,6 @@ class LLM:
                                                 daemon=True)
         self.producer_thread.start()
 
-
     def __del__(self):
         self.producer_thread.join()
 
@@ -59,6 +58,7 @@ class LLM:
         }
 
         self.chat_history.append(history)
+
 
     def get_last_message(self, role=None):
         if role is None:
@@ -122,6 +122,19 @@ class LLM:
         self.prompt_queue.put(self.chat_history)
 
         return True
+
+    def save_chat_history(self, out_path):
+        with open(out_path, "w") as f:
+            json.dump(self.chat_history, f)
+
+    def load_chat_history(self, in_path, append=False):
+        with open(in_path, "r") as f:
+            chat_history = json.load(f)
+
+        if append:
+            self.chat_history.extend(chat_history)
+        else:
+            self.chat_history = chat_history
 
 def has_chars(input_string, chars):
     # returns true if the string has any of the given chars
