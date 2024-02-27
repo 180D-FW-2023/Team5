@@ -181,6 +181,10 @@ class GameServer:
                 client_wav_path = self.tcps.receive_file(client_wav_path)
                 client_res = timeit(sp.recognize_wav)(client_wav_path)
                 print(f"You said: {client_res}")
+                # while client_res is None:
+                #     print('-------------------------------------------this ran**************************')
+                #     self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?", 0)
+                #     sig, client_res = self.get_client_response()
 
             # imu signals
             elif received_signal == Signals.IMU_TURN_LEFT:
@@ -212,6 +216,8 @@ class GameServer:
         # Variables for the game logic
         enforce_game_enders = False
 
+        prev_imu_round = False
+
         # Game loop
         while True:
 
@@ -231,10 +237,14 @@ class GameServer:
             #Note: if we already determined that this round will have potential game enders, we don't also make it an IMU round
             #We also only allow IMU rounds AFTER the first scenario so that the first input will be voice based
             #if (not enforce_game_enders) and (round_num >= 1) and (random.randint(1, IMU_PROBABILISTIC_FACTOR) == 1):
-            if round_num == 1:
+            if round_num == -1:
+                print("----------This is an IMU round---------")
                 self.imu_round = True
                 # Add chat history to affect the next LLM response
                 self.llm.add_chat_history("system", self.prompts["this_round_imu"])
+            
+            elif prev_imu_round: #ensure that this round is not an IMU round if one just happened
+                self.llm.add_chat_history("system", self.prompts["no_longer_imu"])
 
 
             #Now that we know what type of round we will have, send the round type information and previous user input to the LLM
@@ -252,6 +262,7 @@ class GameServer:
                 self.tcps.send_signal(Signals.GAME_END)
                 break
 
+            prev_imu_round = self.imu_round
             self.imu_round = False
 
             sig, prompt = self.get_client_response()
