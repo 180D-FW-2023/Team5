@@ -21,7 +21,7 @@ import sys,signal,os
 import time
 import math
 
-import IMU
+import imu.IMU
 import datetime
 
 

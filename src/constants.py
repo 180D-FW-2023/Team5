@@ -21,8 +21,9 @@ CHUNK = 1024 # Block Size
 
 # game logic
 ENDING_STRING = "for playing" # chat gpt phrase that signals end
-INIT_ENDING_PROBABILISTIC_FACTOR = 10 #Sets the probability that a given situation will have actions that result in probabilistic game ending
+ENDING_PROBABILISTIC_FACTOR = 10 #Sets the probability that a given situation will have actions that result in probabilistic game ending
 # ^ This is the deminator in the probability where the numerator is always 1. i.e. setting this to 5 results in a 20% probability
 # Note that this will decrease over time so that the probability of a random round increases over time
-FAILURE_FACTOR = 1 #Same idea as previous constant except this controls the probability of failure itself
-NUM_SAFE_ROUNDS = 0 #Sets the number of rounds at the beginning where there is 0 probability of a potentially game ending round
+FAILURE_FACTOR = 3 #Same idea as previous constant except this controls the probability of failure itself
+NUM_SAFE_ROUNDS = 3 #Sets the number of rounds at the beginning where there is 0 probability of a potentially game ending round
+IMU_PROBABILISTIC_FACTOR = 5 #Sets the denominator for the probability of an IMU round

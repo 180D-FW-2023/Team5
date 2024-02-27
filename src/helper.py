@@ -1,6 +1,7 @@
 import time # timing tests
 from pathlib import Path
 import json
+import re
 
 # helper function to test timings
 def timeit(func):
