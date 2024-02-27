@@ -32,6 +32,8 @@ class GameServer:
                  temp_dir_path=TEMP_DIR,
                  prompts_json_path=PROMPTS_JSON_PATH,
                  filtered_words_json_path= FILTERED_WORDS_JSON_PATH,
+                 prev_chat_history=None,
+                 chat_history_save_path=None,
                  server_ip=os.getenv("SERVER_IP"),
                  server_port=os.getenv("SERVER_PORT"),
                  remove_temp=True,
@@ -42,9 +44,12 @@ class GameServer:
         self.remove_temp = remove_temp
         self.prompts = h.read_prompts_json(prompts_json_path)
         self.filtered_word_dicts = h.read_json(filtered_words_json_path) # dictionary of words to replace
+
+        self.prev_chat_history = prev_chat_history
+        self.chat_history_save_path = chat_history_save_path
+
         # file transfer setup
         self.tcps = tcp.TCPServer(server_ip, server_port)
-
         # init LLM handler
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
@@ -63,13 +68,19 @@ class GameServer:
 
 
     def init_game(self):
-        # getting the players name
-        user_name = self.execute_single_game_round("system", self.prompts["init"])
+        if self.prev_chat_history is None: # start from scratch
+            # getting the players name
+            user_name = self.execute_single_game_round("system", self.prompts["init"])
 
-        # prompting user for the story setting
-        story_setting = self.execute_single_game_round("user", user_name)
+            # prompting user for the story setting
+            story_setting = self.execute_single_game_round("user", user_name)
 
-        return story_setting
+            return story_setting
+        else:
+            self.llm.load_chat_history(self.prev_chat_history, append=False)
+            reply = self.execute_single_game_round("user", "") # empty prompt will reprompt the previous history
+
+            return reply
 
     def convert_and_send_llm_response(self):
         # sends the actual message since its in a queue thats buffering over time
@@ -183,7 +194,7 @@ class GameServer:
 
 
     def update_ending_prob_factor(self):
-        if self.ending_prob_fact >= 4: # sets the highest probability of 
+        if self.ending_prob_fact >= 4: # sets the highest probability of
             self.ending_prob_fact -= 1
 
     def main_loop(self, initial_prompt):
@@ -238,7 +249,7 @@ class GameServer:
                 else:
                     print(f"Selected option number: {int_selected_choice} from: \"{selected_choice}\"")
                 print("**END DEBUG INFO**")
-                
+
 
                 # Ask LLM to determine which option is most likely to end in failure so we have a numerical value [1, 3]
                 print("**START DEBUG INFO**")
@@ -251,7 +262,7 @@ class GameServer:
                 else:
                     print(f"Failure option number: {int_failure_choice} from: \"{failure_option}\"")
                 print("**END DEBUG INFO**")
-                
+
 
                 # If the child selected the game ending option
                 if True:
@@ -274,6 +285,9 @@ class GameServer:
         if self.remove_temp:
             shutil.rmtree(self.temp_dir)
 
+        if self.chat_history_save_path is not None:
+            self.llm.save_chat_history(self.chat_history_save_path)
+
 def main():
 
     # -d option enables local debugging without a client
@@ -286,7 +300,7 @@ def main():
     local_debug = args.d
     server_ip = args.ip
 
-    game_server = GameServer(server_ip=server_ip, 
+    game_server = GameServer(server_ip=server_ip,
                              use_local=local_debug)
 
     game_server.start_server()
