@@ -19,7 +19,6 @@
 
 import time
 import math
-import IMU2 as IMU
 import datetime
 import os
 import sys
