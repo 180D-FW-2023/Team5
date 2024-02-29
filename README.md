@@ -6,6 +6,9 @@ Teddy bear with IOT-enabled speaker to play interactive choose-your-own-adventur
 # Installation
 
 ## Server Setup
+
+This system requires the use of FFmpeg. Install the full version [here](https://ffmpeg.org/download.html).
+
 Run ```pip install -r requirements-server.txt``` to install all necessary packages on the local server.
 
 Get your OpenAI key and create a ```.env``` file in the root directory of the repo with the following:
