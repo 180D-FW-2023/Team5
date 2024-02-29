@@ -33,6 +33,10 @@ class GameClient:
                  subprocess_mode=True,
                  use_imu = True,
                  imu_use_threading = False):
+        print("\n\n------------------------------------")
+        print("Attempting to initialize game client")
+        print("------------------------------------\n\n")
+
         self.temp_dir = h.init_temp_storage(temp_dir_path)
 
         self.remove_temp = remove_temp
@@ -44,8 +48,7 @@ class GameClient:
         self.imu_use_threading = imu_use_threading
 
         #  client setup
-        print(server_ip)
-        print(server_port)
+        print(f"Attempting to connect to server at IP: {server_ip}, Port: {server_port}\n")
         self.tcpc = tcp.TCPClient(server_ip, server_port) # connects to server in init
         self.tcpc.connect_to_server()
         
@@ -70,8 +73,21 @@ class GameClient:
         collect_imu_data = False
         record = False
         start_time = 0
+        round_num = 1
+        username_round = True
+        theme_round = True
 
         while True:
+
+            if username_round:
+                print("\n---------------------------\nCOLLECTING USER'S NAME\n---------------------------\n")
+                username_round = False
+            elif theme_round:
+                print("\n---------------------------\nCOLLECTING GAME THEME\n---------------------------\n")
+                theme_round = False
+            else:
+                print(f"\n---------------------------\nBeginning game round {round_num}\n---------------------------\n")
+                round_num += 1
 
             if self.use_imu:
                 if not self.imu_enabled: # disables imu if not enabled already
@@ -145,7 +161,7 @@ class GameClient:
                 record_file_path = am.record_audio_by_time(record_file_path, subprocess_mode=self.subprocess_mode, audio=audio)
                 self.tcpc.send_file(record_file_path)
                 start_time = time.time()
-                print(f"\nJust sent server file; starting time: {start_time}\n")
+                #print(f"---Just sent server file; starting time: {start_time}\n")
 
                 os.remove(record_file_path)
             

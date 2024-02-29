@@ -50,7 +50,7 @@ class GameServer:
         # file transfer setup
         self.tcps = tcp.TCPServer(server_ip, server_port)
         # init LLM handler
-        print(os.getenv("KEY"))
+        #print(os.getenv("KEY"))
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
         self.ending_prob_fact = ENDING_PROBABILISTIC_FACTOR
@@ -103,7 +103,9 @@ class GameServer:
             ret = self.llm.response_queue.get(timeout=10)
             if first_message:
                 end = time.time()
+                print("\n--------------------------------------------------------------")
                 print(f"Delay to begin processing llm response: {end-start}")
+                print("--------------------------------------------------------------\n")
                 first_message = False
 
             if ret is None: # message is over
@@ -168,7 +170,9 @@ class GameServer:
                 print(f"[CHUNK {chunk_num}] {audio_text}")
 
     def get_client_response(self):
-        print("Waiting for client response")
+        print("\n****************************")
+        print("Waiting for client response...")
+        print("****************************\n\n")
         # get a client wav message and process
         if not self.use_local:
             # client should get stuff here
@@ -180,7 +184,9 @@ class GameServer:
             if received_signal == Signals.FILE_SENT: # received an audio file
                 client_wav_path = self.tcps.receive_file(client_wav_path)
                 client_res = timeit(sp.recognize_wav)(client_wav_path)
+                print("\n*****************************")
                 print(f"You said: {client_res}")
+                print("*****************************\n")
                 # while client_res is None:
                 #     print('-------------------------------------------this ran**************************')
                 #     self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?", 0)

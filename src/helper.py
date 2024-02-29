@@ -10,7 +10,9 @@ def timeit(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         run_time = end_time - start_time
+        print("\n-------------------------------------")
         print(f"Function {func.__name__} took {run_time:.6f} seconds to run.")
+        print("-------------------------------------\n")
         return result
     return wrapper
 
