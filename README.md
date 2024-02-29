@@ -7,18 +7,25 @@ Teddy bear with IOT-enabled speaker to play interactive choose-your-own-adventur
 
 ## Server Setup
 
+Our project requires the use of an external laptop to be used as a server to perform all computations for the RPI. All information on setup is as follows.
+
 This system requires the use of FFmpeg. Install the full version [here](https://ffmpeg.org/download.html).
 
 Run ```pip install -r requirements-server.txt``` to install all necessary packages on the local server.
 
-Get your OpenAI key and create a ```.env``` file in the root directory of the repo with the following:
+Get your OpenAI key (more information found [here](https://platform.openai.com/api-keys) and create a ```.env``` file in the root directory of the repo with the following:
 ```
 KEY=OPEN AI KEY
 SERVER_PORT=8080
 SERVER_IP=0.0.0.0
 ```
 
+The server is now fully setup and ready to be used as listed in the [Usage Section](#usage).
+
 ## Client Setup
+
+This section can be skipped if the user has received the set up animal already.
+
 This project requires a [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) and [WM8960 Audio Hat](https://www.waveshare.com/wm8960-audio-hat.htm). Run all necessary hardware driver installations.
 
 Run ```pip install -r requirements-client.txt``` to install all necessary packages on the Raspberry Pi.
@@ -44,11 +51,11 @@ This usage setup assumes you have done the full setup for launching the game on 
 
 1. Connect the computer you intend to use to a Network. (Use Hotspot on campus to avoid Eduroam issues).
 2. Find your systems IPv4 address ([Mac](https://www.security.org/vpn/find-mac-ip-address/)) ([Windows](https://support.microsoft.com/en-us/windows/find-your-ip-address-in-windows-f21a9bbc-c582-55cd-35e0-73431160a1b9)) ([Linux](https://phoenixnap.com/kb/how-to-find-ip-address-linux)).
-3. Plug in the USB drive and edit the ```network_config.json``` file by setting the WiFi SSID, WiFi password, and IPv4 at the server_ip element.
+3. Plug in the USB drive and edit the ```network_config.json``` file by setting the WiFi SSID, WiFi password, and IPv4 at the server_ip element. Make sure the network configurations are properly saved. There are times when ejecting can clear out all edited forms.
 4. Plug the USB drive into the RPI. The RPI should be OFF right now.
 5. Make sure your ```.env``` file is set up properly as described in the [server setup](#server-setup).
 6. Start the server on your local machine through ```python src/game_server.py -ip IPv4_HERE```.
-7. Power on the RPI and begin playing. There may be a bit of a delay as the RPI startups.
+7. Power on the RPI and begin playing. There may be a bit of a delay as the RPI startups (2-3mins).
 
 ## Local Debugging
 
