@@ -11,4 +11,8 @@ class Signals(IntEnum):
     IMU_TURN_LEFT = 7
     IMU_ROUND = 8
     IMU_NO_TURN = 9
+    RETRY_IMU = 10
+    IMU_SHAKE_ROUND = 11
+    IMU_SHAKE = 12
+    IMU_NO_SHAKE = 13
     # add future data transfers for imus and stuff here

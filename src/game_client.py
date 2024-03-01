@@ -70,7 +70,9 @@ class GameClient:
         output_queue = queue.Queue(maxsize=10)
 
         imu_round = False
+        imu_shake_round = False
         collect_imu_data = False
+        detect_shake = False
         record = False
         start_time = 0
         round_num = 1
@@ -92,11 +94,15 @@ class GameClient:
             if self.use_imu:
                 if not self.imu_enabled: # disables imu if not enabled already
                     imu_round = False
+                    imu_shake_round = False
 
             signal = self.tcpc.receive_signal()
 
             if signal == Signals.IMU_ROUND:
                 imu_round = True
+            
+            elif signal == Signals.IMU_SHAKE_ROUND:
+                imu_shake_round = True
 
             elif signal == Signals.INIT_FT_STREAMED:
 
@@ -111,16 +117,36 @@ class GameClient:
 
                 if imu_round:
                     collect_imu_data = True
+                elif imu_shake_round:
+                    detect_shake = True
                 record = True
 
             elif signal == Signals.GAME_END:
                 print("Game Ended. Closing Client")
                 sys.exit(0)
+            
+            elif signal == Signals.RETRY_IMU:
+                # We need to retry collecting IMU data
+                collect_imu_data = True
+                print("Retrying imu now")
+                signal = self.tcpc.receive_signal()
+                if signal != Signals.FILE_SENT:
+                    print("Error: received other signal before audio file.")
+                    sys.exit(1)
+
+                received_file_path = self.temp_dir / "received.wav"
+
+                received_file_path = self.tcpc.receive_file(received_file_path)
+                if received_file_path is None: # handles bad inputs
+                    break
+                am.play_audio(received_file_path)
+                os.remove(received_file_path)
+
             else:
                 # TODO: Handle other signals
                 raise NotImplementedError(f"Signal {Signals(signal).name} is not implemented")
 
-
+            # Determine if toy is moved left/right
             if collect_imu_data:
                 imu_round = False
 
@@ -154,7 +180,25 @@ class GameClient:
                 else: #hardcoded response if we aren't using the IMU
                     self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
 
-            
+            # Determine if toy is shook
+            if detect_shake:
+
+                imu_shake_round = False
+
+                print("IMU shake round.")
+
+                if self.use_imu:
+                    imu_res = self.imu.detect_shake()
+                    if imu_res:
+                        print("Shake detected")
+                        self.tcpc.send_signal(Signals.IMU_SHAKE)
+                    else:
+                        print("No shake detected")
+                        self.tcpc.send_signal(Signals.IMU_NO_SHAKE)
+                else: # hardcoded response if we aren't using the IMU
+                    self.tcpc.send_signal(Signals.IMU_SHAKE)
+
+            # Normal round; record audio
             elif record:
                 record_file_path = self.temp_dir / "recorded.wav"
 
@@ -166,6 +210,7 @@ class GameClient:
                 os.remove(record_file_path)
             
             collect_imu_data = False
+            detect_shake = False
             record = False
 
     def __del__(self):

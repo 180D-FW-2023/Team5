@@ -56,9 +56,10 @@ class GameServer:
         self.ending_prob_fact = ENDING_PROBABILISTIC_FACTOR
 
         self.start_time = 0
-        self.use_local = use_local # flag if server isnt started to run a local version for debugging/testing
-        self.imu_round = False     # determines whether current round will use IMU data rather than speech recognition
-        self.retry_imu = False     # flag if no motion was detected during imu round, in which case we must retry
+        self.use_local = use_local    # flag if server isnt started to run a local version for debugging/testing
+        self.imu_round = False        # determines whether current round will use IMU data rather than speech recognition
+        self.imu_shake_round = False  # determines whether current round will use IMU shake data
+        self.retry_imu = False        # flag if no motion was detected during imu round, in which case we must retry
         print(f"LOCAL DEBUGGING SET TO: {use_local}")
         print("-----------------------------------------------")
         print("\n\n\tGame Initialization Complete\n\n")
@@ -91,6 +92,8 @@ class GameServer:
         # For IMU round, send IMU_ROUND signal first
         if self.imu_round:
             self.tcps.send_signal(Signals.IMU_ROUND)
+        elif self.imu_shake_round:
+            self.tcps.send_signal(Signals.IMU_SHAKE_ROUND)
 
         # Otherwise, first signal indicates the start of a streamed message
         if not self.use_local:
@@ -180,7 +183,9 @@ class GameServer:
             received_signal = self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT,
                                                                          Signals.IMU_TURN_LEFT,
                                                                          Signals.IMU_TURN_RIGHT,
-                                                                         Signals.IMU_NO_TURN])
+                                                                         Signals.IMU_NO_TURN, 
+                                                                         Signals.IMU_SHAKE,
+                                                                         Signals.IMU_NO_SHAKE])
             if received_signal == Signals.FILE_SENT: # received an audio file
                 client_wav_path = self.tcps.receive_file(client_wav_path)
                 client_res = timeit(sp.recognize_wav)(client_wav_path)
@@ -202,7 +207,11 @@ class GameServer:
             elif received_signal == Signals.IMU_NO_TURN:
                 self.retry_imu = True
                 client_res = ""
-            # handling imu signals
+            elif received_signal == Signals.IMU_SHAKE:
+                client_res = self.prompts["IMU_shake"]
+            elif received_signal == Signals.IMU_NO_SHAKE:
+                client_res = self.prompts["IMU_no_shake"]
+
         else: # local mode that just takes a user input for text
             received_signal = Signals.FILE_SENT
             client_res = input("--------> You respond: ")
@@ -243,15 +252,22 @@ class GameServer:
             #Note: if we already determined that this round will have potential game enders, we don't also make it an IMU round
             #We also only allow IMU rounds AFTER the first scenario so that the first input will be voice based
             #if (not enforce_game_enders) and (round_num >= 1) and (random.randint(1, IMU_PROBABILISTIC_FACTOR) == 1):
+
             if round_num == -1:
-                print("----------This is an IMU round---------")
-                self.imu_round = True
-                # Add chat history to affect the next LLM response
-                self.llm.add_chat_history("system", self.prompts["this_round_imu"])
+                # We either detect left/right or shaking
+                if random.randint(1,2) == 1:
+                    print("----------This is an IMU left/right round---------")
+                    self.imu_round = True
+                    # Add chat history to affect the next LLM response
+                    self.llm.add_chat_history("system", self.prompts["this_round_imu"])
+                else:
+                    print("----------This is an IMU shake round---------")
+                    self.imu_shake_round = True
+                    # Add chat history to affect the next LLM response
+                    self.llm.add_chat_history("system", self.prompts["this_round_shake_imu"])
             
             elif prev_imu_round: #ensure that this round is not an IMU round if one just happened
                 self.llm.add_chat_history("system", self.prompts["no_longer_imu"])
-
 
             #Now that we know what type of round we will have, send the round type information and previous user input to the LLM
 
@@ -270,6 +286,7 @@ class GameServer:
 
             prev_imu_round = self.imu_round
             self.imu_round = False
+            self.imu_shake_round = False
 
             sig, prompt = self.get_client_response()
             print("Got client response")
@@ -277,7 +294,7 @@ class GameServer:
             # Retry getting IMU data until left/right turn detected
             while self.retry_imu:
                 # Send text to speech to client
-                self.tcps.send_signal(Signals.IMU_ROUND)
+                self.tcps.send_signal(Signals.RETRY_IMU)
                 self.convert_tts_and_send_client("Sorry, I didn't detect any motion. Try turning the toy to the left or the right", chunk_num=0)
                 sig, prompt = self.get_client_response()
                 print("Got client response")

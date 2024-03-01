@@ -9,6 +9,7 @@ M_PI = 3.14159265358979323846
 G_GAIN = 0.070  # [deg/s/LSB]  If you change the dps for gyro, you need to upda>
 AA =  0.40      # Complementary filter constant
 NUM_ITERS = 30
+NUM_SHAKE_ITERS = 15
 
 class ImuHandler:
     def __init__(self,):
@@ -35,6 +36,7 @@ class ImuHandler:
     #     self.res_queue.put(result)
 
     def collect_imu_data(self):
+
         if self.imu_enabled == False:
             return None
         
@@ -113,6 +115,87 @@ class ImuHandler:
             print("Left turn detected")
             return False
         return None
+
+
+    def detect_shake(self):
+
+        if self.imu_enabled == False:
+            return None
+        
+        gyroXangle = 0.0
+        gyroYangle = 0.0
+        gyroZangle = 0.0
+        CFangleX = 0.0
+        CFangleY = 0.0
+        sum_distances = 0.0
+        past_time = time.time()
+
+        for j in range(NUM_SHAKE_ITERS):
+            output_str = ""
+
+            #Read the accelerometer,gyroscope and magnetometer values
+            ACCx = i.readACCx()
+            ACCy = i.readACCy()
+            ACCz = i.readACCz()
+            GYRx = i.readGYRx()
+            GYRy = i.readGYRy()
+            GYRz = i.readGYRz()
+
+            # Display loop time
+            curr_time = time.time()
+            loop_time = curr_time - past_time
+            output_str += "Loop time: %5.2f " % (loop_time)
+            past_time = curr_time
+
+            #Convert Gyro raw to degrees per second
+            rate_gyr_x =  GYRx * G_GAIN
+            rate_gyr_y =  GYRy * G_GAIN
+            rate_gyr_z =  GYRz * G_GAIN
+
+
+            #Calculate the angles from the gyro.
+            gyroXangle+=rate_gyr_x*loop_time
+            gyroYangle+=rate_gyr_y*loop_time
+            gyroZangle+=rate_gyr_z*loop_time
+        
+            #Convert Accelerometer values to degrees
+            AccXangle =  (math.atan2(ACCy,ACCz)*RAD_TO_DEG)
+            AccYangle =  (math.atan2(ACCz,ACCx)+M_PI)*RAD_TO_DEG
+
+             #convert the values to -180 and +180
+            if AccYangle > 90:
+                AccYangle -= 270.0
+            else:
+                AccYangle += 90.0
+
+            prev_CFangleX = CFangleX
+            prev_CFangleY = CFangleY
+
+            #Complementary filter used to combine the accelerometer and gyro values.
+            CFangleX=AA*(CFangleX+rate_gyr_x*loop_time) +(1 - AA) * AccXangle
+            CFangleY=AA*(CFangleY+rate_gyr_y*loop_time) +(1 - AA) * AccYangle
+
+            if j == 0:
+                first_CFangleY = CFangleY
+                first_CFangleX = CFangleX
+            else:
+                sum_distances += abs(CFangleX - prev_CFangleX)
+                sum_distances += abs(CFangleY - prev_CFangleY)
+
+            output_str +="\t# Sum Distances %5.2f #" % (sum_distances)
+
+            print(output_str)
+
+            time.sleep(0.03)
+        
+        print("First X angle: %5.2f \nFirst Y angle: %5.2f" % (first_CFangleX, first_CFangleY)) 
+        print("Sum distances: %5.2f" % (sum_distances))
+        if sum_distances > 800:
+            print("Shake detected.")
+            return True
+        
+        return False
+
 
 if __name__ == '__main__':
     myimu = ImuHandler()
