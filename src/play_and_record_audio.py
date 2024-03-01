@@ -24,7 +24,8 @@ def open_audio_file(path):
     path = str(path)
     try:
         f = wave.open(path, "rb")
-        print(f'{path} Opened: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
+        #print(f'{path} Opened: {f.getnchannels()} channels, {f.getframerate()} sampling rate\n')
+        print("\nPlaying an audio file now...\n")
     except wave.Error as e:
         print(e)
         return None

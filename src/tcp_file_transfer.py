@@ -40,7 +40,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
         try:
             signal_data = self.tcp_client_socket.recv(4)
             signal = struct.unpack("!I", signal_data)[0]
-            print(f"Signal {Signals(signal).name} received.")
+            print(f"--Signal {Signals(signal).name} received--")
         except Exception as e:
             print(f"Error receiving signal: {e}")
             return None
@@ -93,9 +93,9 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
 
         directory_path = os.path.dirname(file_path)
         contents = os.listdir(directory_path)
-        print("Contents of directory:", directory_path)
-        for item in contents:
-            print(item)
+        # print("Contents of directory:", directory_path)
+        # for item in contents:
+        #     print(item)
 
         self.send_signal(Signals.FILE_SENT)
         try:
@@ -108,7 +108,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
                 file_data = file.read()
                 self.tcp_client_socket.sendall(file_data)
 
-            print(f"File {file_path} sent successfully.")
+            print(f"User's reponse audio file sent successfully.")
         except Exception as e:
             print(f"Error sending file: {e}")
 
@@ -131,7 +131,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
                     file.write(data)
                     received_size += len(data)
 
-            print(f"File received and saved at {save_path}")
+            print(f"\n***Game audio file received and saved***\n")
         except Exception as e:
             print(f"Error receiving file: {e}")
             return None
@@ -168,7 +168,7 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
             received_file_path = self.receive_file(save_dir / f"{file_name_tag}_{i}{ext}")
             if first_file:
                 end_time = time.time()
-                print(f"\nJust received first file; ending time: {end_time}\n")
+                #print(f"\nJust received first file; ending time: {end_time}\n")
                 first_file = False
             output_queue.put(received_file_path, timeout=10)
             i += 1
@@ -187,9 +187,11 @@ class TCPClient(TCPBase):
 
     def connect_to_server(self):
         try:
-            print(str(self.server_ip), str(self.server_port))
+            #print(str(self.server_ip), str(self.server_port))
             self.tcp_client_socket.connect((self.server_ip, self.server_port))
+            print("SUCCESS!!\n")
             print(f"Connected to server at {self.server_ip}:{self.server_port}")
+            print("---------------------------------------------------\nClient initialization complete...beginning game now\n---------------------------------------------------\n\n")
         except Exception as e:
             print(f"Error connecting to server: {e}")
             raise
@@ -204,15 +206,17 @@ class TCPServer(TCPBase):
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def start_server(self):
-        print("start server function running")
+        #print("start server function running")
         try:
             self.tcp_server_socket.bind((self.server_ip, self.server_port))
             self.tcp_server_socket.listen()
+            print("\n-------------------------------------")
             print(f"Server listening on {self.server_ip}:{self.server_port}")
 
             # Accept a connection from a client
             self.tcp_client_socket, client_address = self.tcp_server_socket.accept()
             print(f"Accepted connection from {client_address}")
+            print("-------------------------------------\n")
         except Exception as e:
             print(f"Error starting server: {e}")
             raise

@@ -50,7 +50,7 @@ class GameServer:
         # file transfer setup
         self.tcps = tcp.TCPServer(server_ip, server_port)
         # init LLM handler
-        print(os.getenv("KEY"))
+        #print(os.getenv("KEY"))
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
         self.ending_prob_fact = ENDING_PROBABILISTIC_FACTOR
@@ -106,7 +106,9 @@ class GameServer:
             ret = self.llm.response_queue.get(timeout=10)
             if first_message:
                 end = time.time()
+                print("\n--------------------------------------------------------------")
                 print(f"Delay to begin processing llm response: {end-start}")
+                print("--------------------------------------------------------------\n")
                 first_message = False
 
             if ret is None: # message is over
@@ -171,7 +173,9 @@ class GameServer:
                 print(f"[CHUNK {chunk_num}] {audio_text}")
 
     def get_client_response(self):
-        print("Waiting for client response")
+        print("\n****************************")
+        print("Waiting for client response...")
+        print("****************************\n\n")
         # get a client wav message and process
         if not self.use_local:
             # client should get stuff here
@@ -185,7 +189,13 @@ class GameServer:
             if received_signal == Signals.FILE_SENT: # received an audio file
                 client_wav_path = self.tcps.receive_file(client_wav_path)
                 client_res = timeit(sp.recognize_wav)(client_wav_path)
+                print("\n*****************************")
                 print(f"You said: {client_res}")
+                print("*****************************\n")
+                # while client_res is None:
+                #     print('-------------------------------------------this ran**************************')
+                #     self.convert_tts_and_send_client("Sorry, I didn't catch that could you say that again?", 0)
+                #     sig, client_res = self.get_client_response()
 
             # imu signals
             elif received_signal == Signals.IMU_TURN_LEFT:
@@ -221,6 +231,8 @@ class GameServer:
         # Variables for the game logic
         enforce_game_enders = False
 
+        prev_imu_round = False
+
         # Game loop
         while True:
 
@@ -240,16 +252,22 @@ class GameServer:
             #Note: if we already determined that this round will have potential game enders, we don't also make it an IMU round
             #We also only allow IMU rounds AFTER the first scenario so that the first input will be voice based
             #if (not enforce_game_enders) and (round_num >= 1) and (random.randint(1, IMU_PROBABILISTIC_FACTOR) == 1):
-            if round_num == 2:
+
+            if round_num == -1:
                 # We either detect left/right or shaking
-                if random.randint(1,2) == 0:
+                if random.randint(1,2) == 1:
+                    print("----------This is an IMU left/right round---------")
                     self.imu_round = True
                     # Add chat history to affect the next LLM response
                     self.llm.add_chat_history("system", self.prompts["this_round_imu"])
                 else:
+                    print("----------This is an IMU shake round---------")
                     self.imu_shake_round = True
                     # Add chat history to affect the next LLM response
                     self.llm.add_chat_history("system", self.prompts["this_round_shake_imu"])
+            
+            elif prev_imu_round: #ensure that this round is not an IMU round if one just happened
+                self.llm.add_chat_history("system", self.prompts["no_longer_imu"])
 
             #Now that we know what type of round we will have, send the round type information and previous user input to the LLM
 
@@ -266,6 +284,7 @@ class GameServer:
                 self.tcps.send_signal(Signals.GAME_END)
                 break
 
+            prev_imu_round = self.imu_round
             self.imu_round = False
             self.imu_shake_round = False
 
