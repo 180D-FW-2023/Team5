@@ -74,6 +74,8 @@ class GameServer:
             # getting the players name
             user_name = self.execute_single_game_round("system", self.prompts["init"])
 
+            print("User name:", user_name)
+
             # prompting user for the story setting
             story_setting = self.execute_single_game_round("user", user_name)
 
@@ -163,6 +165,7 @@ class GameServer:
         # check if we are just doing local debugging (no client)
         if not self.use_local:
             temp_wav_path = self.convert_tts(audio_text)
+            print("JKFS:LKFJS:LKFSDJ:LF")
             self.tcps.send_file(temp_wav_path)
         else: #do not play audio if running local debugging
             #am.play_audio(temp_wav_path)
@@ -180,13 +183,16 @@ class GameServer:
         if not self.use_local:
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
-            received_signal = self.tcps.receive_signal(expected_signals=[Signals.FILE_SENT,
+            received_signal = self.tcps.receive_signal(expected_signals=[Signals.DATA_SENT,
+                                                                         Signals.FILE_SENT,
                                                                          Signals.IMU_TURN_LEFT,
                                                                          Signals.IMU_TURN_RIGHT,
                                                                          Signals.IMU_NO_TURN, 
                                                                          Signals.IMU_SHAKE,
                                                                          Signals.IMU_NO_SHAKE])
-            if received_signal == Signals.FILE_SENT: # received an audio file
+            if received_signal == Signals.DATA_SENT: # received string
+                client_res = self.tcps.receive_data()
+            elif received_signal == Signals.FILE_SENT: # received an audio file
                 client_wav_path = self.tcps.receive_file(client_wav_path)
                 client_res = timeit(sp.recognize_wav)(client_wav_path)
                 print("\n*****************************")
