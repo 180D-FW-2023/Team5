@@ -1,9 +1,10 @@
 import speech_recognition as sr
-import vosk
+#import vosk
 import wave
 import os
 import json
 import subprocess
+import sounddevice
 
 SAMPLE_RATE = 16000
 
@@ -19,7 +20,8 @@ def recognize_speech_from_mic(recognizer, microphone):
     with microphone as source:
 
         recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source)
+        recognizer.pause_threshold = 0.5
+        audio = recognizer.listen(source, timeout=None)
         response = {
             "success": True,
             "error": None,
@@ -27,7 +29,7 @@ def recognize_speech_from_mic(recognizer, microphone):
         }
 
         try:
-            response["transcription"] = recognizer.recognize_google(audio)
+            response["transcription"] = recognizer.recognize_google(audio, show_all=True)
         except sr.RequestError:
             response["success"] = False
             response["error"] = "API unavailable"
@@ -58,9 +60,15 @@ def gather_speech_data():
             print("ERROR: {}".format(guess["error"]))
             break
 
-        #print("You said: {}".format(guess["transcription"]))
+        try:
+            print("You said: {}".format(guess["transcription"]["alternative"][0]["transcript"]))
 
-        return guess["transcription"]
+            return guess["transcription"]["alternative"][0]["transcript"]
+        
+        except:
+            print("You said: {}".format(guess["transcription"]))
+
+            return guess["transcription"]
 
 # Function for speech recognition from a WAV file
 def recognize_wav(file_path):
@@ -83,50 +91,52 @@ def recognize_wav(file_path):
         print(f"Error with the request to Google Speech Recognition service; {e}")
 
 
-def recognize_wav_vosk(file_path):
-    # Initialize Vosk
-    vosk.SetLogLevel(-1)
-    model_path = r'C:\Users\niklb\Downloads\vosk-model-small-en-us-0.15\vosk-model-small-en-us-0.15'
-    if not os.path.exists(model_path):
-        print(f"Model not found: {model_path}")
-        return -1
+# def recognize_wav_vosk(file_path):
+#     # Initialize Vosk
+#     vosk.SetLogLevel(-1)
+#     model_path = r'C:\Users\niklb\Downloads\vosk-model-small-en-us-0.15\vosk-model-small-en-us-0.15'
+#     if not os.path.exists(model_path):
+#         print(f"Model not found: {model_path}")
+#         return -1
 
-    model = vosk.Model(model_path)
+#     model = vosk.Model(model_path)
 
-    with wave.open(file_path, "wb") as wf:
-        wf.setnchannels(1)
+#     with wave.open(file_path, "wb") as wf:
+#         wf.setnchannels(1)
 
-    # Load an audio file
-    wf = wave.open(file_path, "rb")
+#     # Load an audio file
+#     wf = wave.open(file_path, "rb")
 
-    # if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
-    #     print("Audio file must be WAV format mono PCM.")
-    #     return -1
+#     # if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
+#     #     print("Audio file must be WAV format mono PCM.")
+#     #     return -1
 
-    recognizer = vosk.KaldiRecognizer(model, SAMPLE_RATE)
-    # recognizer.SetWords(True)
-    # recognizer.SetPartialWords(True)
+#     recognizer = vosk.KaldiRecognizer(model, SAMPLE_RATE)
+#     # recognizer.SetWords(True)
+#     # recognizer.SetPartialWords(True)
 
-    speech = ""
+#     speech = ""
 
-    with subprocess.Popen(["ffmpeg", "-loglevel", "quiet", "-i",
-                            file_path, "-ar", str(SAMPLE_RATE) , "-ac", "1", "-f", "s16le", "-"],
-                            stdout=subprocess.PIPE) as process:
-        # Process the audio
-        while True:
-            data = process.stdout.read(4000)
-            if len(data) == 0:
-                break
-            if recognizer.AcceptWaveform(data):
-                result = recognizer.Result()
-                json_result = json.loads(result)["text"]
-                #print(json_result)
-                speech += json_result.strip()
+#     with subprocess.Popen(["ffmpeg", "-loglevel", "quiet", "-i",
+#                             file_path, "-ar", str(SAMPLE_RATE) , "-ac", "1", "-f", "s16le", "-"],
+#                             stdout=subprocess.PIPE) as process:
+#         # Process the audio
+#         while True:
+#             data = process.stdout.read(4000)
+#             if len(data) == 0:
+#                 break
+#             if recognizer.AcceptWaveform(data):
+#                 result = recognizer.Result()
+#                 json_result = json.loads(result)["text"]
+#                 #print(json_result)
+#                 speech += json_result.strip()
 
-    result = recognizer.FinalResult()
-    json_result = json.loads(result)["text"]
-    #print(json_result)
-    speech += json_result.strip()
-    return speech
+#     result = recognizer.FinalResult()
+#     json_result = json.loads(result)["text"]
+#     #print(json_result)
+#     speech += json_result.strip()
+#     return speech
 
-    
+
+if __name__ == '__main__':
+    gather_speech_data()

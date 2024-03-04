@@ -55,18 +55,22 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
 
         self.send_signal(Signals.DATA_SENT)
         try:
+            # Encode the string to bytes
+            data_bytes = data.encode('utf-8')
+
             # Send the file size
-            data_size = len(data)
+            data_size = len(data_bytes)
             size_data = struct.pack("!I", data_size)
             self.tcp_client_socket.sendall(size_data)
 
-            self.tcp_client_socket.sendall(data)
+            self.tcp_client_socket.sendall(data_bytes)
 
-            print(f"Data {data[:20]}... sent successfully.")
+            print(f"Data {data_bytes[:20]}... sent successfully.")
         except Exception as e:
             print(f"Error sending data: {e}")
 
     def receive_data(self):
+        received_data_bytes = b""
         received_data = ""
         try:
             # Receive the file size
@@ -78,15 +82,17 @@ class TCPBase(ABC): # abstract class with functionality for sending and receivin
                 data = self.tcp_client_socket.recv(1024)
                 if not data:
                     break
-                received_data += data
+                received_data_bytes += data
                 received_size += len(data)
+            
+            received_data = received_data_bytes.decode('utf-8')
 
             print(f"Data received including {received_data[:20]}...")
         except Exception as e:
             print(f"Error receiving data: {e}")
             return None
 
-        return data
+        return received_data
 
     def send_file(self, file_path):
         file_path = str(file_path) # for pathlib

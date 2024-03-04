@@ -15,6 +15,7 @@ from signals import Signals
 import helper as h
 import tcp_file_transfer as tcp
 import play_and_record_audio as am
+import speech_to_text as stt
 from constants import *
 
 # change to parent directory to standard directories
@@ -32,7 +33,8 @@ class GameClient:
                  remove_temp=True,
                  subprocess_mode=True,
                  use_imu = True,
-                 imu_use_threading = False):
+                 imu_use_threading = False,
+                 client_speech_to_text = True):
         print("\n\n------------------------------------")
         print("Attempting to initialize game client")
         print("------------------------------------\n\n")
@@ -46,6 +48,8 @@ class GameClient:
         self.subprocess_mode = subprocess_mode # uses subprocessing to call alsaaudio for audio calls
 
         self.imu_use_threading = imu_use_threading
+
+        self.client_speech_to_text = client_speech_to_text # run speech processing on Pi
 
         #  client setup
         print(f"Attempting to connect to server at IP: {server_ip}, Port: {server_port}\n")
@@ -200,14 +204,23 @@ class GameClient:
 
             # Normal round; record audio
             elif record:
-                record_file_path = self.temp_dir / "recorded.wav"
 
-                record_file_path = am.record_audio_by_time(record_file_path, subprocess_mode=self.subprocess_mode, audio=audio)
-                self.tcpc.send_file(record_file_path)
-                start_time = time.time()
-                #print(f"---Just sent server file; starting time: {start_time}\n")
+                # Record and send audio file
+                if not self.client_speech_to_text:
+                    record_file_path = self.temp_dir / "recorded.wav"
 
-                os.remove(record_file_path)
+                    record_file_path = am.record_audio_by_time(record_file_path, subprocess_mode=self.subprocess_mode, audio=audio)
+                    self.tcpc.send_file(record_file_path)
+                    start_time = time.time()
+                    #print(f"---Just sent server file; starting time: {start_time}\n")
+
+                    os.remove(record_file_path)
+
+                # Do speech processing and send resulting text
+                else:
+                    response = stt.gather_speech_data()
+                    self.tcpc.send_data(response)
+
             
             collect_imu_data = False
             detect_shake = False
