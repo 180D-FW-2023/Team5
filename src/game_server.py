@@ -165,7 +165,6 @@ class GameServer:
         # check if we are just doing local debugging (no client)
         if not self.use_local:
             temp_wav_path = self.convert_tts(audio_text)
-            print("JKFS:LKFJS:LKFSDJ:LF")
             self.tcps.send_file(temp_wav_path)
         else: #do not play audio if running local debugging
             #am.play_audio(temp_wav_path)
@@ -237,7 +236,9 @@ class GameServer:
         # Variables for the game logic
         enforce_game_enders = False
 
-        prev_imu_round = False
+        prev_imu_round = False 
+        no_imu_yet = True
+        no_shake_yet = True
 
         # Game loop
         while True:
@@ -259,18 +260,20 @@ class GameServer:
             #We also only allow IMU rounds AFTER the first scenario so that the first input will be voice based
             #if (not enforce_game_enders) and (round_num >= 1) and (random.randint(1, IMU_PROBABILISTIC_FACTOR) == 1):
 
-            if round_num == -1:
+            if round_num > 1 and (no_imu_yet or no_shake_yet) and random.randint(1,2) == 2:
                 # We either detect left/right or shaking
-                if random.randint(1,2) == 1:
+                if no_imu_yet and random.randint(1,2) == 1:
                     print("----------This is an IMU left/right round---------")
                     self.imu_round = True
                     # Add chat history to affect the next LLM response
                     self.llm.add_chat_history("system", self.prompts["this_round_imu"])
-                else:
+                    no_imu_yet = False
+                elif no_shake_yet:
                     print("----------This is an IMU shake round---------")
                     self.imu_shake_round = True
                     # Add chat history to affect the next LLM response
                     self.llm.add_chat_history("system", self.prompts["this_round_shake_imu"])
+                    no_shake_yet = False
             
             elif prev_imu_round: #ensure that this round is not an IMU round if one just happened
                 self.llm.add_chat_history("system", self.prompts["no_longer_imu"])

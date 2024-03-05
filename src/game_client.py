@@ -79,9 +79,10 @@ class GameClient:
         detect_shake = False
         record = False
         start_time = 0
-        round_num = 1
+        round_num = 0
         username_round = True
         theme_round = True
+        increase_round_num = True
 
         while True:
 
@@ -92,8 +93,13 @@ class GameClient:
                 print("\n---------------------------\nCOLLECTING GAME THEME\n---------------------------\n")
                 theme_round = False
             else:
-                print(f"\n---------------------------\nBeginning game round {round_num}\n---------------------------\n")
-                round_num += 1
+                if increase_round_num:
+                    round_num += 1
+                    print(f"\n---------------------------\nBeginning game round {round_num}\n---------------------------\n")
+                else:
+                    print(f"\n---------------------------\nContinuing game round {round_num}\n---------------------------\n")
+                increase_round_num = True
+                
 
             if self.use_imu:
                 if not self.imu_enabled: # disables imu if not enabled already
@@ -104,9 +110,11 @@ class GameClient:
 
             if signal == Signals.IMU_ROUND:
                 imu_round = True
+                increase_round_num = False
             
             elif signal == Signals.IMU_SHAKE_ROUND:
                 imu_shake_round = True
+                increase_round_num = False
 
             elif signal == Signals.INIT_FT_STREAMED:
 
@@ -123,7 +131,8 @@ class GameClient:
                     collect_imu_data = True
                 elif imu_shake_round:
                     detect_shake = True
-                record = True
+                else:
+                    record = True
 
             elif signal == Signals.GAME_END:
                 print("Game Ended. Closing Client")
@@ -146,6 +155,8 @@ class GameClient:
                 am.play_audio(received_file_path)
                 os.remove(received_file_path)
 
+                increase_round_num = False # Don't count this as a round
+
             else:
                 # TODO: Handle other signals
                 raise NotImplementedError(f"Signal {Signals(signal).name} is not implemented")
@@ -154,17 +165,15 @@ class GameClient:
             if collect_imu_data:
                 imu_round = False
 
-                print("IMU round.")
-
                 if self.use_imu:
                     if self.imu_use_threading:
                         imu_thread = threading.Thread(target=self.imu.collect_imu_data_wrapper, daemon=True)
                         imu_thread.start()
                         if self.imu.res_queue.get(timeout=5) == False:
-                            print("\nleft left left left\n")
+                            #print("\nleft left left left\n")
                             self.tcpc.send_signal(Signals.IMU_TURN_LEFT)
                         else:
-                            print("\nright right right right\n")
+                            #print("\nright right right right\n")
                             self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
                         
                         imu_thread.join()
@@ -172,10 +181,10 @@ class GameClient:
                     else:
                         imu_res = self.imu.collect_imu_data()
                         if imu_res == False:
-                            print("\nleft left left left\n")
+                            #print("\nleft left left left\n")
                             self.tcpc.send_signal(Signals.IMU_TURN_LEFT)
                         elif imu_res == True:
-                            print("\nright right right right\n")
+                            #print("\nright right right right\n")
                             self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
                         # Return value was None
                         else:
@@ -185,7 +194,7 @@ class GameClient:
                     self.tcpc.send_signal(Signals.IMU_TURN_RIGHT)
 
             # Determine if toy is shook
-            if detect_shake:
+            elif detect_shake:
 
                 imu_shake_round = False
 
@@ -194,10 +203,10 @@ class GameClient:
                 if self.use_imu:
                     imu_res = self.imu.detect_shake()
                     if imu_res:
-                        print("Shake detected")
+                        print("\nShake detected\n")
                         self.tcpc.send_signal(Signals.IMU_SHAKE)
                     else:
-                        print("No shake detected")
+                        print("\nNo shake detected\n")
                         self.tcpc.send_signal(Signals.IMU_NO_SHAKE)
                 else: # hardcoded response if we aren't using the IMU
                     self.tcpc.send_signal(Signals.IMU_SHAKE)

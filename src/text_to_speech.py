@@ -25,6 +25,7 @@ from helper import timeit
 from constants import *
 
 import subprocess
+import re
 
 def play_wav(wav_path):
     cmd = "aplay -D hw:3,0 -f S16_LE -c2 " + wav_path
@@ -66,6 +67,13 @@ def split_into_two_pieces(input_string):
             pieces = input_string.split(word, 1)
             return pieces[0].strip(), word + pieces[1]
     return None
+
+
+# Invalid strings are None, empty string, or don't have any letters
+def text_str_valid(input_str):
+    if input_str == None or input_str == "":
+        return False 
+    return bool(re.search(r'[a-zA-Z]', input_str))
 
 # Creates a bear voice wav file and plays it
 def convert_text_to_bear_audio(input_text, output_path_num):
@@ -152,8 +160,11 @@ def convert_text_to_bear_audio_opt(input_text,
     with open(temp_mp3_path, "wb") as f:
         for text_piece in text_pieces:
             # Text-to-speech and save as WAV
-            tts = gTTS(text_piece)
-            timeit(tts.write_to_fp)(f) # actual tts time
+            # print("\nText piece", text_piece)
+            # print(type(text_piece))    
+            if text_str_valid(text_piece):
+                tts = gTTS(text_piece)
+                timeit(tts.write_to_fp)(f) # actual tts time
 
     # ffmpeg run
     pitch = (2**n_semitones)/12 # frequency ratio of a semitone
