@@ -5,6 +5,7 @@ import os
 import json
 import subprocess
 import sounddevice
+import time
 
 SAMPLE_RATE = 16000
 
@@ -19,14 +20,16 @@ def recognize_speech_from_mic(recognizer, microphone):
 
     with microphone as source:
 
+        start = time.time()
         recognizer.adjust_for_ambient_noise(source)
-        recognizer.pause_threshold = 0.5
+        recognizer.pause_threshold = 1
         audio = recognizer.listen(source, timeout=None)
         response = {
             "success": True,
             "error": None,
             "transcription": None
         }
+        duration = time.time() - start
 
         try:
             response["transcription"] = recognizer.recognize_google(audio, show_all=True)
@@ -36,7 +39,7 @@ def recognize_speech_from_mic(recognizer, microphone):
         except sr.UnknownValueError:
             response["error"] = "Unable to recognize speech"
 
-        return response
+        return response, duration
 
 # Top level function for recording audio and translating to text
 def gather_speech_data():
@@ -47,7 +50,7 @@ def gather_speech_data():
     while True:
         for j in range(PROMPT_LIMIT):
             print('Speak!')
-            guess = recognize_speech_from_mic(recognizer, microphone)
+            guess, duration = recognize_speech_from_mic(recognizer, microphone)
 
             print("Done recording, analyzing response...")
             if guess["transcription"]:
@@ -64,10 +67,10 @@ def gather_speech_data():
         try:
             print("You said: {}".format(guess["transcription"]["alternative"][0]["transcript"]))
 
-            return guess["transcription"]["alternative"][0]["transcript"]
+            return guess["transcription"]["alternative"][0]["transcript"], duration
         
         except:
-            print("You said: {}".format(guess["transcription"]))
+            print("You said: {}".format(guess["transcription"])), duration
 
             return guess["transcription"]
 

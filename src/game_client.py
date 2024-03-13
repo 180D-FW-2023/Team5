@@ -17,6 +17,7 @@ import tcp_file_transfer as tcp
 import play_and_record_audio as am
 import speech_to_text as stt
 from constants import *
+from helper import timeit
 
 # change to parent directory to standard directories
 os.chdir(Path(__file__).parent.parent.resolve())
@@ -227,7 +228,8 @@ class GameClient:
 
                 # Do speech processing and send resulting text
                 else:
-                    response = stt.gather_speech_data()
+                    response, duration = timeit(stt.gather_speech_data)()
+                    print("Duration of recording:", duration)
                     self.tcpc.send_data(response)
 
             

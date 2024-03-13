@@ -346,7 +346,7 @@ class ImuHandler:
         
         print("First X angle: %5.2f \nFirst Y angle: %5.2f" % (first_CFangleX, first_CFangleY)) 
         print("Sum distances: %5.2f" % (sum_distances))
-        if sum_distances > 700:
+        if sum_distances > 500:
             print("Shake detected.")
             return True
         

@@ -195,12 +195,15 @@ class GameServer:
             else:
                 print(f"[CHUNK {chunk_num}] {audio_text}")
 
-    def get_client_response(self):
+    def get_client_response(self, retry_imu_limit=False):
         print("\n****************************")
         print("Waiting for client response...")
         print("****************************\n\n")
         # get a client wav message and process
         if not self.use_local:
+            if retry_imu_limit:
+                self.retry_imu = False
+                return Signals.IMU_TURN_LEFT, self.prompts["IMU_turn_left"]
             # client should get stuff here
             client_wav_path = self.temp_dir / "client_res.wav"
             received_signal = self.tcps.receive_signal(expected_signals=[Signals.DATA_SENT,
@@ -270,6 +273,7 @@ class GameServer:
         child_won = False
 
         star_round = False
+        num_imu_tries = 0
 
         # Game loop
         while True:
@@ -394,11 +398,15 @@ class GameServer:
 
             # Retry getting IMU data until left/right turn detected
             while self.retry_imu:
-                # Send text to speech to client
-                self.tcps.send_signal(Signals.RETRY_IMU)
-                self.convert_tts_and_send_client("Sorry, I didn't detect any motion. Try turning the toy to the left or the right", chunk_num=0)
-                sig, prompt = self.get_client_response()
-                print("Got client response")
+                if num_imu_tries == 1:
+                    sig, prompt = self.get_client_response(retry_imu_limit=True)
+                else:    
+                    # Send text to speech to client
+                    self.tcps.send_signal(Signals.RETRY_IMU)
+                    self.convert_tts_and_send_client("Sorry, I didn't detect any motion. Try turning the toy to the left or the right", chunk_num=0)
+                    sig, prompt = self.get_client_response()
+                    print("Got client response")
+                    num_imu_tries += 1
 
             # If we are in a game ending probabilistic round, handle cases when the child chooses a failure option intelligently
             # Note that we create separate LLM API calls to determine option choice and failure option. Empirically, the additional delay is negligible.

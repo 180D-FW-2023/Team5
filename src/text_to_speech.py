@@ -174,10 +174,10 @@ def convert_text_to_bear_audio_opt(input_text,
                           hide_banner=None,
                           loglevel="error"
                           ) # =None is an ffmpeg flag with no input kw
-    stream = stream.filter("rubberband",
-                           pitch=pitch,
-                           tempo=tempo_multiplier
-                           )
+    # stream = stream.filter("rubberband",
+    #                        pitch=pitch,
+    #                        tempo=tempo_multiplier
+    #                        )
     stream = stream.filter("atempo",
                            tempo=tempo_multiplier
                            )
