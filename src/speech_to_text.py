@@ -49,6 +49,7 @@ def gather_speech_data():
             print('Speak!')
             guess = recognize_speech_from_mic(recognizer, microphone)
 
+            print("Done recording, analyzing response...")
             if guess["transcription"]:
                 break
             if not guess["success"]:

@@ -243,12 +243,13 @@ def main():
     parser = argparse.ArgumentParser(description='Game client program for the choose your own adventure game.')
     parser.add_argument('-ns', action='store_false', help='No subprocess mode (do not play audio via alsa audio subprocess, instead use pygame) ')
     parser.add_argument('-ni', action='store_false', help='Do NOT use the IMU')
+    parser.add_argument('-nls', action='store_false', help='Do NOT use local speech processing')
 
     args = parser.parse_args()
     subprocess_mode = args.ns
     use_imu = args.ni
 
-    game_client = GameClient(subprocess_mode=subprocess_mode, use_imu=use_imu)
+    game_client = GameClient(subprocess_mode=subprocess_mode, use_imu=use_imu, client_speech_to_text=args.nls)
     game_client.main_loop()
 
 

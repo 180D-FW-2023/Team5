@@ -37,20 +37,23 @@ class GameServer:
                  server_port=os.getenv("SERVER_PORT"),
                  remove_temp=True,
                  stream_llm=True):
-
+        
         # general file init
         self.temp_dir = h.init_temp_storage(temp_dir_path)
         self.remove_temp = remove_temp
         self.prompts = h.read_prompts_json(prompts_json_path)
+        
         self.filtered_word_dicts = h.read_json(filtered_words_json_path) # dictionary of words to replace
-
+        
         self.prev_chat_history = prev_chat_history
         self.chat_history_save_path = chat_history_save_path
+        
 
         # file transfer setup
         self.tcps = tcp.TCPServer(server_ip, server_port)
         # init LLM handler
         #print(os.getenv("KEY"))
+        
         self.llm = LLM(os.getenv("KEY"), stream=stream_llm)
 
         self.ending_prob_fact = ENDING_PROBABILISTIC_FACTOR
@@ -86,13 +89,14 @@ class GameServer:
 
             return reply
 
-    def convert_and_send_llm_response(self):
+    def convert_and_send_llm_response(self, star_message=None, child_won=None, star_round=False):
         # sends the actual message since its in a queue thats buffering over time
         chunks = []
         role = None
 
         # For IMU round, send IMU_ROUND signal first
         if self.imu_round:
+            print("sending imu signal")
             self.tcps.send_signal(Signals.IMU_ROUND)
         elif self.imu_shake_round:
             self.tcps.send_signal(Signals.IMU_SHAKE_ROUND)
@@ -105,25 +109,42 @@ class GameServer:
         chunk_num = 0 # enumerate the chunks in each stream response
         start = time.time()
         while True:
-            ret = self.llm.response_queue.get(timeout=10)
-            if first_message:
-                end = time.time()
-                print("\n--------------------------------------------------------------")
-                print(f"Delay to begin processing llm response: {end-start}")
-                print("--------------------------------------------------------------\n")
-                first_message = False
+            if child_won == None:
+                if star_message != None and first_message:
+                    ret = [None, star_message]
+                    if star_round:
+                        ret = [None, ret[1] + " Heads up, if you do the right thing this round, you could earn a star!"]
+                elif star_round and first_message:
+                    ret = [None, " Heads up, if you do the right thing this round, you could earn a star!"]
+                else:
+                    ret = self.llm.response_queue.get(timeout=10)
+                if first_message:
+                    end = time.time()
+                    print("\n--------------------------------------------------------------")
+                    print(f"Delay to begin processing llm response: {end-start}")
+                    print("--------------------------------------------------------------\n")
+                    first_message = False
 
-            if ret is None: # message is over
-                break
-            role, chunk = ret
-            if chunk == "":
-                continue
-            chunks.append(chunk)
-            if not self.use_local:
-                self.convert_tts_and_send_client(chunk, chunk_num=0) # chunk num is only used for local debugging
+                if ret is None: # message is over
+                    break
+                role, chunk = ret
+                if chunk == "":
+                    continue
+                chunks.append(chunk)
+                if not self.use_local:
+                    self.convert_tts_and_send_client(chunk, chunk_num=0) # chunk num is only used for local debugging
+                else:
+                    self.convert_tts_and_send_client(chunk, chunk_num=chunk_num)
+                chunk_num+=1
             else:
-                self.convert_tts_and_send_client(chunk, chunk_num=chunk_num)
-            chunk_num+=1
+                chunk = "Congratulations! You have collected enough stars to win the game! Thanks for playing! Come play again another time."
+                chunks.append(chunk)
+                if not self.use_local:
+                    self.convert_tts_and_send_client(chunk, chunk_num=0) # chunk num is only used for local debugging
+                else:
+                    self.convert_tts_and_send_client(chunk, chunk_num=chunk_num)
+                chunk_num+=1
+                break
 
         # signals the end of a file stream
         if not self.use_local:
@@ -237,18 +258,36 @@ class GameServer:
         enforce_game_enders = False
 
         prev_imu_round = False 
+        prev_imu_shake_round = False
         no_imu_yet = True
         no_shake_yet = True
 
+        prev_game_enders = False
+
+        stars = 0
+        star_now = False
+
+        child_won = False
+
+        star_round = False
+
         # Game loop
         while True:
+
+            if stars >= 3:
+                child_won = True
+
+            self.imu_round = False
+            self.imu_shake_round = False
 
             #The next two sections determine, probabilistically, the type of round that is about to occur (game ender, IMU, regular)
 
             #Determine if this situation will have a game ending choice probabilistically
             # (PROBABILISTIC_FACTOR)^(-1)% chance of a potentially game ending round
-            if round_num > NUM_SAFE_ROUNDS and random.randint(1, ENDING_PROBABILISTIC_FACTOR) == 1:
+            #if round_num > 1 and round_num > NUM_SAFE_ROUNDS and random.randint(1, ENDING_PROBABILISTIC_FACTOR) == 1:
+            if round_num == 6:
                 print("----------This round will have potential game enders---------")
+                self.llm.add_chat_history("system", self.prompts["game_not_over"])
                 self.llm.add_chat_history("system", self.prompts["next_round_random"])
                 enforce_game_enders = True
             else:
@@ -260,31 +299,65 @@ class GameServer:
             #We also only allow IMU rounds AFTER the first scenario so that the first input will be voice based
             #if (not enforce_game_enders) and (round_num >= 1) and (random.randint(1, IMU_PROBABILISTIC_FACTOR) == 1):
 
-            if round_num > 1 and (no_imu_yet or no_shake_yet) and random.randint(1,2) == 2:
+            #if round_num > 1 and (not enforce_game_enders) and (no_imu_yet or no_shake_yet) and random.randint(1,3) == 1:
+            if round_num == 2 or round_num == 4:
                 # We either detect left/right or shaking
-                if no_imu_yet and random.randint(1,2) == 1:
+                #if no_imu_yet and random.randint(1,2) == 0:
+                if round_num == 2:
                     print("----------This is an IMU left/right round---------")
                     self.imu_round = True
                     # Add chat history to affect the next LLM response
+                    self.llm.add_chat_history("system", self.prompts["game_not_over"])
                     self.llm.add_chat_history("system", self.prompts["this_round_imu"])
                     no_imu_yet = False
-                elif no_shake_yet:
+                else:
                     print("----------This is an IMU shake round---------")
                     self.imu_shake_round = True
                     # Add chat history to affect the next LLM response
+                    self.llm.add_chat_history("system", self.prompts["game_not_over"])
                     self.llm.add_chat_history("system", self.prompts["this_round_shake_imu"])
+                    #self.llm.add_chat_history("system", self.prompts["game_not_over"])
                     no_shake_yet = False
             
-            elif prev_imu_round: #ensure that this round is not an IMU round if one just happened
-                self.llm.add_chat_history("system", self.prompts["no_longer_imu"])
+            if round_num == 5:
+                #if random.randint(1, 3) == 1:
+                print("Another star earned")
+                star_round = True
+            
+            # elif prev_imu_round: #ensure that this round is not an IMU round if one just happened
+            #     print("prev imu round detected")
+            #     self.llm.add_chat_history("system", self.prompts["no_longer_imu"])
+            #     stars += 1
+            #     print("*****YOU GOT A STAR******")
+            #     self.llm.add_chat_history("system", self.prompts["obtained_star"])
+            # elif prev_imu_shake_round: #ensure that this round is not an IMU round if one just happened
+            #     print("prev shake round detected")
+            #     self.llm.add_chat_history("system", self.prompts["no_longer_imu_shake"])
+            #     stars += 1
+            #     print("*****YOU GOT A STAR******")
+            #     self.llm.add_chat_history("system", self.prompts["obtained_star"])
 
             #Now that we know what type of round we will have, send the round type information and previous user input to the LLM
 
             #Add the current information to the LLM prompting queue to be handled by the LLM handler thread
+            if round_num == 3:
+                self.llm.add_chat_history("system", self.prompts["game_not_over"])
             self.llm.prompt_llm(prompt=prompt)
 
             #Since the LLM response is stored in a queue, this function is called to continuously pop the queue, process the resulting text, and send it to the client
-            llm_res = self.convert_and_send_llm_response()
+            star_message = self.prompts["obtained_star"] + f" Now you have {stars} stars!"
+
+            if child_won:
+                llm_res = self.convert_and_send_llm_response(child_won=child_won)
+            elif star_now:
+                print("this ran")
+                llm_res = self.convert_and_send_llm_response(star_message=star_message, star_round=star_round)
+                star_round = False
+            else:
+                llm_res = self.convert_and_send_llm_response(star_round=star_round)
+                star_round = False
+                print("llm res")
+            star_now = False
 
             #TODO clean this up
             if "for playing" in llm_res:
@@ -293,12 +366,31 @@ class GameServer:
                 self.tcps.send_signal(Signals.GAME_END)
                 break
 
-            prev_imu_round = self.imu_round
-            self.imu_round = False
-            self.imu_shake_round = False
+            # prev_imu_round = self.imu_round
+            # prev_imu_shake_round = self.imu_shake_round
+            # self.imu_round = False
+            # self.imu_shake_round = False
 
             sig, prompt = self.get_client_response()
             print("Got client response")
+
+            if self.imu_round: #ensure that this round is not an IMU round if one just happened
+                print("prev imu round detected")
+                self.llm.add_chat_history("system", self.prompts["no_longer_imu"])
+            elif self.imu_shake_round: #ensure that this round is not an IMU round if one just happened
+                print("prev shake round detected")
+                self.llm.add_chat_history("system", self.prompts["no_longer_imu_shake"])
+                stars += 1
+                star_now = True
+                print("*****YOU GOT A STAR******")
+                # self.llm.add_chat_history("system", self.prompts["game_not_over"])
+                # self.llm.add_chat_history("system", self.prompts["obtained_star"] + f" Now you have {stars} stars!")
+            
+            if round_num == 5:
+                #if random.randint(1, 3) == 1:
+                print("Another star earned")
+                star_now = True
+                stars += 1
 
             # Retry getting IMU data until left/right turn detected
             while self.retry_imu:
@@ -340,7 +432,7 @@ class GameServer:
 
 
                 # If the child selected the game ending option
-                if True:
+                if False:
                     print("FAILURE. Ending Game")
                     if self.use_local:
                         sys.exit()
@@ -349,12 +441,22 @@ class GameServer:
                         self.llm.prompt_llm(prompt=prompt)
                         llm_res = self.convert_and_send_llm_response()
                         self.tcps.send_signal(Signals.GAME_END)
+                else:
+                    stars += 1
+                    print("*****YOU GOT A STAR******")
+                    star_now = True
+                    #self.llm.add_chat_history("system", self.prompts["game_not_over"])
+                    #self.llm.add_chat_history("system", self.prompts["obtained_star"] + f" Now you have {stars} stars!\"")
+                    self.llm.add_chat_history("system", self.prompts["child_not_wrong"])
+                    
+
 
         
             if round_num >= 2:
                 self.update_ending_prob_factor()
 
             round_num += 1
+            prev_game_enders = enforce_game_enders
 
     def __del__(self):
         if self.remove_temp:
@@ -374,14 +476,14 @@ def main():
     args = parser.parse_args()
     local_debug = args.d
     server_ip = args.ip
-
+    print("starting game server") 
     game_server = GameServer(server_ip=server_ip,
                              use_local=local_debug)
 
     game_server.start_server()
 
     story_setting = game_server.init_game()
-
+    
     game_server.main_loop(story_setting)
 
 if __name__ == '__main__':

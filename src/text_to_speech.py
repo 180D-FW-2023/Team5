@@ -144,7 +144,7 @@ def convert_text_to_bear_audio_opt(input_text,
                                    output_path,
                                    temp_dir_path,
                                    n_semitones=4,
-                                   tempo_multiplier=1.3):
+                                   tempo_multiplier=1.2):
 
     temp_mp3_path = temp_dir_path / "tba_conversion.mp3"
 
@@ -174,10 +174,10 @@ def convert_text_to_bear_audio_opt(input_text,
                           hide_banner=None,
                           loglevel="error"
                           ) # =None is an ffmpeg flag with no input kw
-    # stream = stream.filter("rubberband",
-    #                        pitch=pitch,
-    #                        tempo=tempo_multiplier
-    #                        )
+    stream = stream.filter("rubberband",
+                           pitch=pitch,
+                           tempo=tempo_multiplier
+                           )
     stream = stream.filter("atempo",
                            tempo=tempo_multiplier
                            )

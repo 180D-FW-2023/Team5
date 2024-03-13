@@ -38,7 +38,7 @@ def read_prompts_json(json_path):
     prompts = read_json(json_path)
     for key, val in prompts.items():
         prompts[key] = val.replace("\n", "")
-
+    
     return prompts
 
 
