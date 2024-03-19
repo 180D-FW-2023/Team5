@@ -1,6 +1,11 @@
+
+import time
+import sys
+
+sys.path.append(r"../src")
+
 from signals import Signals
 from imu.imu_handler import ImuHandler
-import time
 
 imu = ImuHandler()
 
@@ -10,18 +15,18 @@ while True:
     # Left/right Test
     imu_res = imu.collect_imu_data()
     if imu_res == False:
-        print("\nleft left left left\n")
+        print("\nLeft turn detected\n")
     elif imu_res == True:
-        print("\nright right right right\n")
+        print("\nRight turn detected\n")
     # Return value was None
     else:
-        print("\nno turn detected\n")
+        print("\nNo turn detected\n")
 
     # # Shake Test
     # imu_res = imu.detect_shake()
     # if imu_res:
-    #     print("SHAKE")
+    #     print("Shake detected")
     # else:
-    #     print("no shake")
+    #     print("No shake detected")
         
     time.sleep(3)
