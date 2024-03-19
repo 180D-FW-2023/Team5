@@ -100,6 +100,23 @@ The main body of our code is located in the src folder. Below is a brief descrip
   ```rpi_boot.py``` -
   Initiates Wi-Fi and the client code on the Raspberry Pi.
 
+The IMU folder (within src) contains the software backend for the implementation of kinematic controls.
+
+  ```IMU.py``` - 
+  Driver code for Berry IMU v3 detection and measurements.
+
+  ```LIS3MDL.py``` and ```LSM6DSL.py``` - 
+  Addresses for reading from the IMU.
+
+  ```berryIMU.py``` - 
+  Contains different filters and improvements for IMU data.
+
+  ```calibrateBerryIMU.py``` - 
+  Runs calibration script to get maximum values in each dimension.
+
+  ```imu_handler.py``` - 
+  Top level IMU file that initializes IMU and has left/right and shake detection algorithms.
+
 The data folder contains code for the configuration of our game:
 
 ```filtered_words.json``` -
@@ -128,8 +145,6 @@ Tests speech file detection on the server's end.
 ```whisper_api_stream_test.py```-
 Tests initial call to the API.
 
-
-The IMU folder contains the software backend for the implementation of kinematic controls, though we still have not been able to integrate the hardware.
 
 The necessary packages for our system are located in ```requirements-client.txt``` and ```requirements-server.txt```.
 
